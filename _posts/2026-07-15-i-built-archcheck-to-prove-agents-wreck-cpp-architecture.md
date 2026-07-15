@@ -82,7 +82,7 @@ On a pull request it posts a comment: what drift the change introduced, and whet
 
 ![archcheck comment on a pull request](/assets/images/archcheck_pr_comment.png)
 
-The 14-PR demo is public: five PRs introduce copy-paste and fire the advisory, five are look-alikes that stay silent. [blurman-ai/archcheck-demo](https://github.com/blurman-ai/archcheck-demo/pulls?q=is%3Apr+is%3Aclosed).
+The 14-PR demo is public: nine PRs introduce copy-paste and fire the advisory, five are look-alikes that stay silent. [blurman-ai/archcheck-demo](https://github.com/blurman-ai/archcheck-demo/pulls?q=is%3Apr+is%3Aclosed).
 
 One static binary, Apache-2.0. Point it at a C++ repo:
 
