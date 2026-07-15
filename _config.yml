@@ -1,0 +1,10 @@
+title: Sergey Blekher
+description: Notes on C++, architecture erosion, and building tools to measure it.
+author: Sergey Blekher
+theme: minima
+minima:
+  skin: classic
+plugins:
+  - jekyll-feed
+markdown: kramdown
+permalink: /:year/:month/:day/:title/
