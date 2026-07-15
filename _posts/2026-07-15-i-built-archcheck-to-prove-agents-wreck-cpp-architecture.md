@@ -58,6 +58,8 @@ One PR promised to break circular dependencies and created a cycle of seven file
 
 The bot read the diff and repeated what it claimed. The cycle lives in the graph, one level up from the diff, and nobody built the graph.
 
+[All 38 PRs, with links and the bot's own words.](https://github.com/blurman-ai/archcheck/blob/master/docs/research/bot_review_drift_receipts.md)
+
 ## Three cycles the diff did not show
 
 folly: `Future.h` and `Promise.h` include each other through folly's trailing-include idiom. RocksDB: the public `db.h` and an experimental `multi_scan.h` include each other, and the back-edge is a removable forward declaration on a header with huge fan-in. Windows Terminal: `Utils.h` and `SettingContainer.h` include each other, and `SettingContainer` never appears anywhere in `Utils.h` except on that one include line.
