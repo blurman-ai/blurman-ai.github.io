@@ -64,7 +64,7 @@ The bot read the diff and repeated what it claimed. The cycle lives in the graph
 
 folly: `Future.h` and `Promise.h` include each other through folly's trailing-include idiom. RocksDB: the public `db.h` and an experimental `multi_scan.h` include each other, and the back-edge is a removable forward declaration on a header with huge fan-in. Windows Terminal: `Utils.h` and `SettingContainer.h` include each other, and `SettingContainer` never appears anywhere in `Utils.h` except on that one include line.
 
-None of this is bad engineering. These are mature projects that carry history and sometimes couple on purpose. The point is not to shame an old cycle. It is to catch a new one the moment it lands.
+None of this is bad engineering. These are mature projects that carry history and sometimes couple on purpose. The point is not to shame an old cycle. It is to catch a new one the moment it lands. Each finding is pinned to a commit with both include lines and a reproduce command: [docs/findings](https://github.com/blurman-ai/archcheck/blob/master/docs/findings/README.md).
 
 ## Limits
 
@@ -77,6 +77,12 @@ Git metadata misses unmarked AI use, so the human bucket is contaminated. Squash
 `archcheck` is not a linter, a bug finder, or a formatter, and it does not touch C++ security. It answers one question the others do not: did this pull request make the physical design worse than the baseline. No `compile_commands.json`, because it never compiles: it reads every `#ifdef` branch, not one build. A cycle under `#ifdef _WIN32` is drift even when today's Linux build can't see it. When a path is ambiguous it marks it ambiguous and adds no edge; it does not guess.
 
 ## Try it
+
+On a pull request it posts a comment: what drift the change introduced, and whether the gate passed.
+
+![archcheck comment on a pull request](/assets/images/archcheck_pr_comment.png)
+
+The 14-PR demo is public: five PRs introduce copy-paste and fire the advisory, five are look-alikes that stay silent. [blurman-ai/archcheck-demo](https://github.com/blurman-ai/archcheck-demo/pulls?q=is%3Apr+is%3Aclosed).
 
 One static binary, Apache-2.0. Point it at a C++ repo:
 
