@@ -92,4 +92,6 @@ New and grown cycles and new god-headers fail the run. Clones, complexity growth
 
 <https://github.com/blurman-ai/archcheck>
 
-The feedback I want is narrow. Which findings are sharp enough that you would let them fail CI. Which should stay advisory. And which structural regressions you currently catch only by memory and luck.
+`archcheck` is open. Grab a build from [releases](https://github.com/blurman-ai/archcheck/releases) and drop that one line into CI.
+
+I built it to be used by teams, not to sit in my own repo. I'm most interested in how it holds up on large codebases with real legacy. Open an issue, send a PR, or send me a repo link, especially one with active agent development. I'll run the per-commit drift analysis, send back what the history turns up, and open a PR wiring archcheck into your CI.
