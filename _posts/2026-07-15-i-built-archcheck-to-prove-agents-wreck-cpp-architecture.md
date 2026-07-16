@@ -4,7 +4,7 @@ title: "I built archcheck to prove coding agents wreck C++ architecture. 484,500
 date: 2026-07-15
 ---
 
-I build simulation and hardware-in-the-loop (HIL) systems in C++, and by early 2026 most of the new code around me came from coding agents. I expected their failure mode to be structural. Agents match nearby code well, but constraints that span files and modules are easy to lose across a long context. The result should have been more include cycles, god-headers, copy-paste, cross-module coupling.
+Thirty years of C++ behind me: 2D/3D geometry, chart processing, the data pipeline behind marine and aviation simulation, distributed systems delivering data to five thousand vessels. I've been a tech lead, an architect, a principal engineer, and a head of engineering with thirty-five people under me. These days I build simulation and hardware-in-the-loop (HIL) systems, and by early 2026 most of the new code around me came from coding agents. I expected their failure mode to be structural. Agents match nearby code well, but constraints that span files and modules are easy to lose across a long context. The result should have been more include cycles, god-headers, copy-paste, cross-module coupling.
 
 I built a tool to measure exactly those regressions per commit, ran it across a large corpus to prove the point, and the corpus did not cooperate.
 
