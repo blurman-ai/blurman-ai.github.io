@@ -62,7 +62,7 @@ The bot read the diff and repeated what the PR description claimed. The cycle li
 
 ## Three cycles the diff did not show
 
-folly: `Future.h` includes `Promise.h` in its normal include block, and `Promise.h` includes `Future.h` back at the bottom of the file, after the namespace closes, where the function bodies need the full type. RocksDB: the public `db.h` and an experimental `multi_scan.h` include each other, and the back edge can be removed with one forward declaration, on a header 110 other files include. Windows Terminal: `Utils.h` and `SettingContainer.h` include each other, and `SettingContainer` never appears anywhere in `Utils.h` except on that one include line.
+folly: `Future.h` includes `Promise.h` in its normal include block, and `Promise.h` includes `Future.h` back at the bottom of the file, after the namespace closes, where the function bodies need the full type. RocksDB: the public `db.h` and an experimental `multi_scan.h` include each other, and the back edge can be removed with two forward declarations, on a header 110 other files include. The fix is submitted: [facebook/rocksdb#14944](https://github.com/facebook/rocksdb/pull/14944). Windows Terminal: `Utils.h` and `SettingContainer.h` include each other, and `SettingContainer` never appears anywhere in `Utils.h` except on that one include line.
 
 None of this is bad engineering. These are mature projects that carry history and sometimes couple on purpose. The point is not to shame an old cycle. It is to catch a new one the moment it lands. Each finding is pinned to a commit with both include lines and a reproduce command: [docs/findings](https://github.com/blurman-ai/archcheck/blob/master/docs/findings/README.md).
 
