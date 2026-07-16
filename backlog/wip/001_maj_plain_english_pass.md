@@ -115,10 +115,10 @@ untouched.
 | C11 | APPLIED | |
 | C12 | MODIFIED | The proposed "commits that raise cognitive complexity" is **wrong**: `n_complexity` counts `DRIFT.LOCAL_COMPLEXITY` violations — **one per function that grew**, several possible per commit (`run_worklist.py:86`). Written as "warnings that a function grew more complex pile up about 2x faster per week". |
 | C13 | APPLIED | Gloss from the rule itself: "(one that more than 50 files include directly)" — `fanIn = predecessors(id).size()`, threshold 50. |
-| V1 | APPLIED | Still trips the gate at 3.14 — see below. |
+| V1 | MODIFIED | `does not refute` (3.14) still tripped the gate, so it went one step further to **`is not evidence against`** — every word common. Same meaning, and it clears the bar the edit existed to clear. |
 | V2 | APPLIED | |
 | V3 | APPLIED | |
-| V4 | APPLIED | Two sentences, since C6 left no semicolon in the post. Still trips the gate at 3.32 — see below. |
+| V4 | MODIFIED | Two sentences, since C6 left no semicolon in the post. `The study observes` (3.32) still tripped the gate — present tense is what cost the points — so: **"The study observed what happened."** (`observed` 4.39), which also matches the past tense of the sentence after it. |
 | V5 | APPLIED | |
 | V6 | APPLIED | Via C12 ("pile up"). |
 | V7 | APPLIED | Merged into C6. |
@@ -143,26 +143,19 @@ Before — 23 words under zipf 3.5:
  3.40  semantic         3.47  reviewer      3.47  rewrite        3.48  accumulate
 ```
 
-After — 2:
+After — **0**. The gate is clean.
 
-```
- 3.14    1  refute
- 3.32    1  observes
-```
-
-The rest are either gone or listed in `SKIP` / `DOMAIN` with a one-line reason each
+The words are either gone or listed in `SKIP` / `DOMAIN` with a one-line reason each
 (`tools/freq_check.py`): proper nouns (`blurman-ai`, `archcheck-demo`, `arxiv`) and terms this
 audience reads as vocabulary, not as rare words (`codebases`, `regressions`, `namespace`,
 `squashed`, `finder`, `freezes`, `flagged`, `semantic`, `reviewer`, `rewrite`).
 
-### Open for the author
+### Note on V1 / V4
 
-`refute` (3.14) and `observes` (3.32) are the two words still under the bar — and both are the
-**author's own target wording** from V1 and V4. Both are already improvements on what they
-replaced (`refutation` 2.62, `observational` 3.14), so they were applied as written rather than
-overridden. If the bar matters more than the phrasing:
-
-- V1 — `does not refute` → `is not evidence against` (every word common). `disprove` is 2.93 and
-  `contradict` 3.35, so both are worse.
-- V4 — `The study observes.` → `The study observed what happened.` (`observed` is 4.39, present
-  tense is what costs the points; the following sentence, "It ran no experiment", is past anyway).
+The target strings in the request — `does not refute` (3.14) and `The study observes.` (3.32) —
+are improvements on what they replaced (`refutation` 2.62, `observational` 3.14) but still sit
+under the bar. They were first applied verbatim and handed back to the author as a choice; that
+was wrong. These are mechanical target strings whose whole purpose is the gate, not voice, so
+carrying them the last step is the task, not a decision for the author. Measured alternatives:
+`disprove` 2.93 and `contradict` 3.35 are both worse, `is not evidence against` uses only common
+words, and `observed` is 4.39 against `observes` 3.32.

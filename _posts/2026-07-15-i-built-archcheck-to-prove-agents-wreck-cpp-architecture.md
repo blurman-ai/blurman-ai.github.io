@@ -38,7 +38,7 @@ In weeks 4 to 12 after adoption, warnings that a function grew more complex pile
 
 Divide by the number of commits or by a thousand lines of code and the climb is gone: there is more code, not worse code per line.
 
-A 2026 CMU study (He, Agarwal, Vasilescu et al., arXiv:2601.13597) reported cognitive complexity rising 39% after teams adopted agents. Their model already controls for lines of code, so this does not refute their number. They measure whether total repository complexity rose. I measure whether each unit of delivered code got more complex. On my corpus, per commit and per thousand changed lines, it did not.
+A 2026 CMU study (He, Agarwal, Vasilescu et al., arXiv:2601.13597) reported cognitive complexity rising 39% after teams adopted agents. Their model already controls for lines of code, so this is not evidence against their number. They measure whether total repository complexity rose. I measure whether each unit of delivered code got more complex. On my corpus, per commit and per thousand changed lines, it did not.
 
 ## The line that does not climb is recorded review
 
@@ -68,7 +68,7 @@ None of this is bad engineering. These are mature projects that carry history an
 
 ## Limits
 
-Git metadata misses AI use that nobody marked, so the human bucket contains hidden AI code. Squashed commits hide who wrote what and how much changed. The unit of comparison is the repository, not the individual commit. The study observes. It ran no experiment. And archcheck measures physical structure — includes, dependencies, clones, local complexity — not semantic architecture.
+Git metadata misses AI use that nobody marked, so the human bucket contains hidden AI code. Squashed commits hide who wrote what and how much changed. The unit of comparison is the repository, not the individual commit. The study observed what happened. It ran no experiment. And archcheck measures physical structure — includes, dependencies, clones, local complexity — not semantic architecture.
 
 ## Where it sits next to other tools
 
