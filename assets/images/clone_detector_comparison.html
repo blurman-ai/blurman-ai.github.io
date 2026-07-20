@@ -1,0 +1,131 @@
+<!doctype html>
+<!--
+  Reproducible source for clone_detector_comparison.png.
+  Head-to-head: archcheck --duplication vs the two free C++ clone detectors that
+  build/run for free (Duplo, line-based; PMD CPD, token-based).
+
+  Render:
+    chromium --headless=new --hide-scrollbars --force-device-scale-factor=2 \
+      --window-size=1140,1180 \
+      --screenshot=assets/images/clone_detector_comparison.png \
+      assets/images/clone_detector_comparison.html
+
+  Every cell is anchored to cpparch/docs/research/clone_detector_comparison.md
+  (task #194), hand-verified on Smatchet@f8368a23 and duckdb_webbed@10bf9649.
+  The one honest amber for archcheck (cross-function prologue) is the gap PMD
+  catches and we don't yet — tracked as #195.
+-->
+<meta charset="utf-8">
+<style>
+  :root {
+    --green-ring:#2e9e6b; --green-fill:#e8f5ee;
+    --red-ring:#dd5b5b;   --red-fill:#fbecec;
+    --amber-ring:#d3a017; --amber-fill:#f8f1d9;
+    --ink:#242424; --muted:#8a8a8a; --head:#555; --line:#ececec;
+    --hl:#f4f8fc; --hl-border:#dbe6f1;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  html,body { background:#ffffff; }
+  .page {
+    width:1140px; padding:44px 40px 22px;
+    font-family:"Helvetica Neue",Arial,"Liberation Sans","DejaVu Sans",sans-serif;
+    color:var(--ink); -webkit-font-smoothing:antialiased;
+  }
+  h1 { font-size:38px; font-weight:600; letter-spacing:.2px; margin-bottom:6px; }
+  .subtitle { font-size:18px; color:#777; margin-bottom:26px; }
+  .grid { display:grid; grid-template-columns:340px repeat(3, 1fr); }
+  .colhead { text-align:center; padding:6px 8px 16px; font-size:26px; color:var(--head); align-self:end; }
+  .rowlabel { display:flex; flex-direction:column; justify-content:center; align-items:flex-start; font-size:21px; padding:20px 16px 20px 0; line-height:1.3; }
+  .cell { text-align:center; padding:16px 8px; }
+  .headrule { grid-column:1 / -1; border-bottom:1.5px solid #b9b9b9; }
+  .rowline  { grid-column:1 / -1; border-bottom:1px solid var(--line); }
+  .whatis { font-size:16px; color:#777; padding:12px 8px 20px; text-align:center; line-height:1.3; align-self:start; }
+  .icon {
+    width:50px; height:50px; border-radius:50%; display:inline-flex;
+    align-items:center; justify-content:center; font-size:24px; border:2px solid; line-height:1;
+  }
+  .yes { border-color:var(--green-ring); background:var(--green-fill); color:var(--green-ring); }
+  .no  { border-color:var(--red-ring);   background:var(--red-fill);   color:var(--red-ring); }
+  .mid { border-color:var(--amber-ring); background:var(--amber-fill); color:var(--amber-ring); }
+  .sub { display:block; margin-top:9px; font-size:14px; color:var(--muted); line-height:1.25; }
+  .acol { background:var(--hl); border-left:1px solid var(--hl-border); border-right:1px solid var(--hl-border); }
+  .acol.top { border-top:1px solid var(--hl-border); border-radius:6px 6px 0 0; color:#000; font-weight:700; }
+  .acol.bot { border-bottom:1px solid var(--hl-border); border-radius:0 0 6px 6px; }
+</style>
+
+<div class="page">
+  <h1>Copy-paste detection: archcheck vs the free C++ tools</h1>
+  <div class="subtitle">Hand-verified head-to-head on real OSS (Smatchet, duckdb_webbed). Defaults, out of the box.</div>
+  <div class="grid">
+
+    <!-- header row -->
+    <div></div>
+    <div class="colhead">Duplo</div>
+    <div class="colhead">PMD&nbsp;CPD</div>
+    <div class="colhead acol top">archcheck</div>
+    <div class="headrule"></div>
+
+    <!-- what it is -->
+    <div class="rowlabel">What it is</div>
+    <div class="whatis">line-based<br>clone finder</div>
+    <div class="whatis">token-based<br>clone finder</div>
+    <div class="whatis acol">fragment-based,<br>typed &amp; scored</div>
+    <div class="rowline"></div>
+
+    <!-- Free -->
+    <div class="rowlabel">Free for C++</div>
+    <div class="cell"><span class="icon yes">&#10003;</span><span class="sub">GPL-2.0</span></div>
+    <div class="cell"><span class="icon yes">&#10003;</span><span class="sub">BSD</span></div>
+    <div class="cell acol"><span class="icon yes">&#10003;</span><span class="sub">Apache-2.0</span></div>
+    <div class="rowline"></div>
+
+    <!-- No build / no runtime -->
+    <div class="rowlabel">Runs on a bare clone<br>no build, no JVM</div>
+    <div class="cell"><span class="icon yes">&#10003;</span><span class="sub">native binary</span></div>
+    <div class="cell"><span class="icon no">&#10007;</span><span class="sub">needs Java</span></div>
+    <div class="cell acol"><span class="icon yes">&#10003;</span><span class="sub">one binary, offline</span></div>
+    <div class="rowline"></div>
+
+    <!-- Type-2 renamed clones (THE differentiator) -->
+    <div class="rowlabel"><b>Renamed (Type-2) clones</b></div>
+    <div class="cell"><span class="icon no">&#10007;</span><span class="sub">renamed lines read as different</span></div>
+    <div class="cell"><span class="icon no">&#10007;</span><span class="sub">id-sensitive by default</span></div>
+    <div class="cell acol"><span class="icon yes">&#10003;</span><span class="sub">32-line copy-rename caught</span></div>
+    <div class="rowline"></div>
+
+    <!-- Clone type labels -->
+    <div class="rowlabel">Labels the clone<br>EXACT / RENAMED / STRUCTURAL</div>
+    <div class="cell"><span class="icon no">&#10007;</span></div>
+    <div class="cell"><span class="icon no">&#10007;</span></div>
+    <div class="cell acol"><span class="icon yes">&#10003;</span></div>
+    <div class="rowline"></div>
+
+    <!-- Vendored exclusion -->
+    <div class="rowlabel">Skips vendored /<br>third-party code</div>
+    <div class="cell"><span class="icon no">&#10007;</span><span class="sub">reports ImGui clones</span></div>
+    <div class="cell"><span class="icon no">&#10007;</span></div>
+    <div class="cell acol"><span class="icon yes">&#10003;</span><span class="sub">by design</span></div>
+    <div class="rowline"></div>
+
+    <!-- Signal without tuning -->
+    <div class="rowlabel">Usable signal<br>with zero tuning</div>
+    <div class="cell"><span class="icon mid">~</span><span class="sub">noisy at 4-line default</span></div>
+    <div class="cell"><span class="icon mid">~</span><span class="sub">Type-2 mode floods ~4&times;</span></div>
+    <div class="cell acol"><span class="icon yes">&#10003;</span><span class="sub">typed, deduped</span></div>
+    <div class="rowline"></div>
+
+    <!-- Honest row: cross-function prologue (where PMD wins) -->
+    <div class="rowlabel">Cross-function shared prologue</div>
+    <div class="cell"><span class="icon no">&#10007;</span></div>
+    <div class="cell"><span class="icon yes">&#10003;</span></div>
+    <div class="cell acol"><span class="icon mid">~</span><span class="sub">partial &mdash; in progress (#195)</span></div>
+    <div class="rowline"></div>
+
+    <!-- Per-PR drift gate (the punch, last row) -->
+    <div class="rowlabel"><b>Per-PR drift gate</b><br>only new clones vs a baseline</div>
+    <div class="cell"><span class="icon no">&#10007;</span><span class="sub">snapshot only</span></div>
+    <div class="cell"><span class="icon no">&#10007;</span><span class="sub">snapshot only</span></div>
+    <div class="cell acol bot"><span class="icon yes">&#10003;</span><span class="sub">--diff vs baseline</span></div>
+
+  </div>
+</div>
