@@ -76,6 +76,12 @@ Git metadata misses AI use that nobody marked, so the human bucket contains hidd
 
 `archcheck` is not a linter, a bug finder, or a formatter, and it does not touch C++ security. It answers one question the others do not: did this pull request make the physical design worse than the baseline. No `compile_commands.json`, because it never compiles: it reads every `#ifdef` branch, not one build. A cycle under `#ifdef _WIN32` is drift even when today's Linux build can't see it. When it cannot resolve a path, it adds no edge. It does not guess.
 
+Zoom in on copy-paste and the gap has a shape. I ran archcheck against the two free C++ clone detectors, Duplo (line-based) and PMD CPD (token-based), on real projects, and checked every hit by hand.
+
+![How archcheck compares to the free C++ clone detectors](/assets/images/clone_detector_comparison.png)
+
+The free tools find exact copies. They miss the copy that was renamed: a whole function pasted with its variables swapped. A line-based tool sees every line as changed; a token-based one keys on the names. That is the copy that rots, because it reads as new code in review and diverges on its own. archcheck normalizes it, labels it EXACT/RENAMED/STRUCTURAL, and skips your vendored trees so the report stays about your code. PMD does catch one case archcheck misses today, a block shared across two otherwise-different functions; I found it in this same run and I'm fixing it.
+
 ## Try it
 
 On a pull request it posts a comment: what drift the change introduced, and whether the gate passed.
