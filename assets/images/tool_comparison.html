@@ -1,0 +1,138 @@
+<!doctype html>
+<!--
+  Reproducible source for tool_comparison.png (the article's comparison table).
+  Replaces the old hand-made image: edit the data below, then render:
+
+    chromium --headless=new --hide-scrollbars --force-device-scale-factor=2 \
+      --window-size=1590,1180 \
+      --screenshot=assets/images/tool_comparison.png \
+      assets/images/tool_comparison.html
+
+  Facts anchored to cpparch/docs/comparison.md. Tools chosen to show the gap:
+  cppdep already computes the metrics for free (green until the per-PR drift gate);
+  paid arch tools (CppDepend) gate but need a build. archcheck is the only free,
+  build-free, per-commit drift gate — the one all-green column.
+-->
+<meta charset="utf-8">
+<style>
+  :root {
+    --green-ring:#2e9e6b; --green-fill:#e8f5ee;
+    --red-ring:#dd5b5b;   --red-fill:#fbecec;
+    --amber-ring:#d3a017; --amber-fill:#f8f1d9;
+    --ink:#242424; --muted:#8a8a8a; --head:#555; --line:#ececec;
+    --hl:#f4f8fc; --hl-border:#dbe6f1;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  html,body { background:#ffffff; }
+  .page {
+    width:1590px; padding:44px 40px 20px;
+    font-family:"Helvetica Neue",Arial,"Liberation Sans","DejaVu Sans",sans-serif;
+    color:var(--ink); -webkit-font-smoothing:antialiased;
+  }
+  h1 { font-size:40px; font-weight:600; letter-spacing:.2px; margin-bottom:26px; }
+  .grid { display:grid; grid-template-columns:250px repeat(6, 1fr); }
+  .colhead { text-align:center; padding:6px 8px 16px; font-size:25px; color:var(--head); align-self:end; }
+  .rowlabel { display:flex; align-items:center; font-size:20px; padding:20px 14px 20px 0; line-height:1.25; }
+  .cell { text-align:center; padding:16px 8px; }
+  .headrule { grid-column:1 / -1; border-bottom:1.5px solid #b9b9b9; }
+  .rowline  { grid-column:1 / -1; border-bottom:1px solid var(--line); }
+  .whatis { font-size:16px; color:#777; padding:12px 8px 20px; text-align:center; line-height:1.3; align-self:start; }
+  .icon {
+    width:50px; height:50px; border-radius:50%; display:inline-flex;
+    align-items:center; justify-content:center; font-size:24px; border:2px solid; line-height:1;
+  }
+  .yes { border-color:var(--green-ring); background:var(--green-fill); color:var(--green-ring); }
+  .no  { border-color:var(--red-ring);   background:var(--red-fill);   color:var(--red-ring); }
+  .mid { border-color:var(--amber-ring); background:var(--amber-fill); color:var(--amber-ring); }
+  .sub { display:block; margin-top:9px; font-size:14px; color:var(--muted); line-height:1.25; }
+  /* highlighted archcheck column, per-cell so grid auto-flow is untouched */
+  .acol { background:var(--hl); border-left:1px solid var(--hl-border); border-right:1px solid var(--hl-border); }
+  .acol.top { border-top:1px solid var(--hl-border); border-radius:6px 6px 0 0; color:#000; font-weight:700; }
+  .acol.bot { border-bottom:1px solid var(--hl-border); border-radius:0 0 6px 6px; }
+</style>
+
+<div class="page">
+  <h1>Where archcheck sits next to other C++ tools</h1>
+  <div class="grid">
+
+    <!-- header row -->
+    <div></div>
+    <div class="colhead">clang-tidy</div>
+    <div class="colhead">SonarQube</div>
+    <div class="colhead">cppdep</div>
+    <div class="colhead">cpp-dependencies</div>
+    <div class="colhead">CppDepend</div>
+    <div class="colhead acol top">archcheck</div>
+    <div class="headrule"></div>
+
+    <!-- what it is -->
+    <div class="rowlabel">What it is</div>
+    <div class="whatis">lint checks</div>
+    <div class="whatis">quality&nbsp;+ security platform</div>
+    <div class="whatis">Lakos metrics<br>(dep_utils)</div>
+    <div class="whatis">include grapher</div>
+    <div class="whatis">arch + metrics</div>
+    <div class="whatis acol">C++ arch in CI</div>
+    <div class="rowline"></div>
+
+    <!-- Free -->
+    <div class="rowlabel">Free for C++</div>
+    <div class="cell"><span class="icon yes">&#10003;</span><span class="sub">open source</span></div>
+    <div class="cell"><span class="icon mid">~</span><span class="sub">Community free, PR gate paid</span></div>
+    <div class="cell"><span class="icon yes">&#10003;</span><span class="sub">open source</span></div>
+    <div class="cell"><span class="icon yes">&#10003;</span><span class="sub">open source</span></div>
+    <div class="cell"><span class="icon no">&#10007;</span><span class="sub">paid</span></div>
+    <div class="cell acol"><span class="icon yes">&#10003;</span><span class="sub">Apache-2.0</span></div>
+    <div class="rowline"></div>
+
+    <!-- Include cycles -->
+    <div class="rowlabel">Detects include cycles</div>
+    <div class="cell"><span class="icon mid">~</span><span class="sub">one narrow check</span></div>
+    <div class="cell"><span class="icon no">&#10007;</span></div>
+    <div class="cell"><span class="icon yes">&#10003;</span></div>
+    <div class="cell"><span class="icon yes">&#10003;</span></div>
+    <div class="cell"><span class="icon yes">&#10003;</span></div>
+    <div class="cell acol"><span class="icon yes">&#10003;</span></div>
+    <div class="rowline"></div>
+
+    <!-- Lakos levelization -->
+    <div class="rowlabel">Lakos levelization<br>(CCD / NCCD)</div>
+    <div class="cell"><span class="icon no">&#10007;</span></div>
+    <div class="cell"><span class="icon no">&#10007;</span></div>
+    <div class="cell"><span class="icon yes">&#10003;</span></div>
+    <div class="cell"><span class="icon no">&#10007;</span></div>
+    <div class="cell"><span class="icon yes">&#10003;</span></div>
+    <div class="cell acol"><span class="icon yes">&#10003;</span></div>
+    <div class="rowline"></div>
+
+    <!-- New copy-paste in a PR -->
+    <div class="rowlabel">New copy-paste in a PR</div>
+    <div class="cell"><span class="icon no">&#10007;</span></div>
+    <div class="cell"><span class="icon yes">&#10003;</span><span class="sub">density %</span></div>
+    <div class="cell"><span class="icon no">&#10007;</span></div>
+    <div class="cell"><span class="icon no">&#10007;</span></div>
+    <div class="cell"><span class="icon no">&#10007;</span></div>
+    <div class="cell acol"><span class="icon yes">&#10003;</span><span class="sub">concrete pairs</span></div>
+    <div class="rowline"></div>
+
+    <!-- Runs on a bare clone -->
+    <div class="rowlabel">Runs on a bare clone<br>no build, no config</div>
+    <div class="cell"><span class="icon no">&#10007;</span><span class="sub">needs compile_commands.json</span></div>
+    <div class="cell"><span class="icon no">&#10007;</span><span class="sub">server + scanner</span></div>
+    <div class="cell"><span class="icon yes">&#10003;</span></div>
+    <div class="cell"><span class="icon yes">&#10003;</span></div>
+    <div class="cell"><span class="icon no">&#10007;</span><span class="sub">needs a build</span></div>
+    <div class="cell acol"><span class="icon yes">&#10003;</span><span class="sub">one binary, offline</span></div>
+    <div class="rowline"></div>
+
+    <!-- Per-PR drift gate (the punch, last row) -->
+    <div class="rowlabel"><b>Per-PR drift vs a baseline</b></div>
+    <div class="cell"><span class="icon no">&#10007;</span><span class="sub">snapshot only</span></div>
+    <div class="cell"><span class="icon mid">~</span><span class="sub">new-code %, not arch</span></div>
+    <div class="cell"><span class="icon no">&#10007;</span><span class="sub">snapshot only</span></div>
+    <div class="cell"><span class="icon no">&#10007;</span><span class="sub">snapshot only</span></div>
+    <div class="cell"><span class="icon mid">~</span><span class="sub">paid + needs build</span></div>
+    <div class="cell acol bot"><span class="icon yes">&#10003;</span><span class="sub">--diff vs baseline</span></div>
+
+  </div>
+</div>
