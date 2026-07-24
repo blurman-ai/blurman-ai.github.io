@@ -82,6 +82,22 @@ Zoom in on copy-paste and the gap has a shape. I ran archcheck against the two f
 
 The free tools find exact copies. They miss the copy that was renamed: a whole function pasted with its variables swapped. A line-based tool sees every line as changed; a token-based one keys on the names. That is the copy that rots, because it reads as new code in review and diverges on its own. archcheck normalizes it, labels it EXACT/RENAMED/STRUCTURAL, and skips your vendored trees so the report stays about your code. PMD does catch one case archcheck misses today, a block shared across two otherwise-different functions; I found it in this same run and I'm fixing it.
 
+## How archcheck works
+
+archcheck is one lexical pass over the source tree. It walks the repository, reads each file once, blanks out comments and string literals, and scans for `#include`. Working on text instead of a build is what lets it see every `#ifdef` branch at once: it never evaluates the conditions, it only tracks how deep inside them each line sits, so a header guarded by `#if _WIN32` enters the graph beside the unconditional ones.
+
+Every resolved include becomes a directed edge between two files. A quote include resolves against the including file's own directory first, then against an index of every path suffix in the project; an angle include goes to a system bucket or that same index. A miss adds no edge and is counted, never invented. Vendored, test, and generated files are dropped before they reach the graph, so the picture stays about your code. The "areas" the coupling rules speak of are not stored anywhere. archcheck derives them from the path on demand: strip the wrapper directories (`src/`, `include/`, `lib/`), keep the first segment that remains. An edge whose endpoints land in two different areas is a cross-area edge.
+
+The structural rules run on that graph. Cycles come from an iterative Tarjan pass over the strongly connected components; when a component holds more than one file, the SF.9 rule walks it a second time to print a concrete A→B→C→A path. A god-header is any header more than fifty files include directly, precompiled headers exempted. Chain length fires at an include depth past ten. The same pass computes the Lakos levelization numbers, CCD/ACD/NCCD, from the reachable set of every node.
+
+Complexity is local and syntactic. A small state machine reads each function body and scores cognitive complexity the SonarSource way: a point per `if`/`for`/`while`/`switch`/`catch`, another for each level of nesting around it, one per run of `&&` or `||`. Past forty it reports; in drift mode it fires when a function crosses twenty-five or climbs further.
+
+Two more signals watch boolean sprawl, both off the token stream rather than the graph. Field accretion counts the by-value `bool` members a struct or class holds and fires when a type keeps gaining them commit after commit, the shape that wanted an enum or a state machine; `static` constants and `bool*`/`bool&` out-parameters stay out of the count. On signatures the same scan reports a function that takes two or more `bool` parameters, or one whose name reads like a flag (`enable`, `skip`, `force`, `is…`), and it reports a call that passes two or more `true`/`false` literals positionally, where each bare boolean says nothing at the call site.
+
+Clones run on the token stream. archcheck normalizes every identifier to one placeholder and every literal to another, keeps keywords and operators verbatim, and indexes rare k-grams to pull candidate fragments of at least thirty tokens over a similarity floor. Then it compares two views of each fragment, the normalized tokens and the raw ones: identical on both is EXACT, identical normalized but differing at identifier slots is RENAMED, a differing normalized shape is STRUCTURAL. RENAMED is the copy a token tool loses, because only the names moved.
+
+`--diff` does all of this twice. archcheck forks git and reads both trees straight from the object store through `cat-file --batch`, builds a graph for each side, and subtracts them. A cycle that appeared or grew, or a header that crossed the god-header line, fails the run. New clones, complexity growth, coupling and flag drift return as advisories, and a bulk import switches the advisories off so a vendored drop cannot bury the signal.
+
 ## Try it
 
 On a pull request it posts a comment: what drift the change introduced, and whether the gate passed.
