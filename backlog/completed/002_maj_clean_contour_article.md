@@ -98,3 +98,7 @@ from the main text, no reasoning paragraphs.
   separately, every check has failed once, the screen draws what the server returned,
   the outcome does not depend on the order of responses; each with an example and a check.
   "Three failed patches" moved to rule 14.
+- APPLIED, same day: rule 14 "the server decides what is allowed" (baseline principle 15,
+  dgtls/baseline#156), "three failed patches" is rule 15. A paragraph after the opening
+  story from the author's team chat of 22.10.2026: a developer expected the model to know
+  these principles already. The developer is not named.

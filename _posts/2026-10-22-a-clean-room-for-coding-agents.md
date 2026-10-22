@@ -3,7 +3,7 @@ layout: post
 title: "A clean room for coding agents"
 date: 2026-10-22
 permalink: /clean-room/
-description: "Fourteen rules for replacing legacy code with a coding agent: behavior cards instead of old code, stored state, one writer, a failure state for every wait."
+description: "Fifteen rules for replacing legacy code with a coding agent: behavior cards instead of old code, stored state, one writer, a failure state for every wait."
 excerpt: "Phoenix used a clean room to build a compatible BIOS. I use the same separation to keep a coding agent from repeating the code it is supposed to replace."
 ---
 
@@ -15,9 +15,11 @@ I hide old code from my coding agent for another reason: it repeats whatever it 
 
 A bug comes in: a user's attempt hangs on step one. The agent fixes it where it hangs. One more condition, one more function that computes the same state its own way. In one day the agent merged four patches into one function. That function derived the attempt's state from the event log across seven tables. The next day the agent wrote that it had never stopped to ask where the attempt keeps its state. The answer was nowhere, and it had been in front of the agent since day one.
 
-This happened right next to a clean room we had built a month earlier. There the agent writes new code from cards that describe the old behavior and never opens the old code. Fourteen rules hold inside the clean room, and each violation can be found with grep or with one question about the diff.
+This happened right next to a clean room we had built a month earlier. There the agent writes new code from cards that describe the old behavior and never opens the old code. Fifteen rules hold inside the clean room, and each violation can be found with grep or with one question about the diff.
 
-## The fourteen rules
+An experienced developer on my team read the audit behind these rules and asked: shouldn't the model already know such principles, the way it knows clean code? His agent had told him it cannot guarantee good code and offered a narrow list of hard-coded checks. The model does not hold these principles. It continues the code in front of it, and it learned from code full of workarounds. So the rules are written down where the agent reads them, and checked on every change.
+
+## The fifteen rules
 
 <ol class="rules-summary">
   <li><a href="#rule-1">State is a stored field with a declared list of values and a transition table.</a></li>
@@ -33,7 +35,8 @@ This happened right next to a clean room we had built a month earlier. There the
   <li><a href="#rule-11">Every check has failed at least once on a real defect.</a></li>
   <li><a href="#rule-12">The screen draws the state the server returned.</a></li>
   <li><a href="#rule-13">The outcome does not depend on the order of responses.</a></li>
-  <li><a href="#rule-14">Three failed patches: stop and propose an architecture change.</a></li>
+  <li><a href="#rule-14">Whether an action is allowed is decided by the server.</a></li>
+  <li><a href="#rule-15">Three failed patches: stop and propose an architecture change.</a></li>
 </ol>
 
 ## How the clean room works
@@ -47,7 +50,7 @@ This happened right next to a clean room we had built a month earlier. There the
   <div class="arrow">→</div>
   <div class="step"><strong>Implementer</strong>never opens the old code</div>
   <div class="arrow">→</div>
-  <div class="step"><strong>New code</strong>under the fourteen rules</div>
+  <div class="step"><strong>New code</strong>under the fifteen rules</div>
 </div>
 
 A card describes one operation from the outside: input, result, failures, and what must stay true. It does not name helpers, tables or the call order of the old code.
@@ -227,7 +230,19 @@ The user edits a draft's title while the model is still generating the draft. Th
 <p class="check">Deliver the model response before and after the user's edit: the final title is the user's in both cases.</p>
 </div>
 
-### <a id="rule-14"></a>14. Three failed patches mean a design change
+### <a id="rule-14"></a>14. The server decides what is allowed
+
+<div class="rule" markdown="1">
+A rule that allows or forbids a user's action (a retry, a deadline, a limit, access) is checked by the server. The browser keeps no copy of the rule: it learns what is available from the server's response and shows a refusal by its reason code.
+</div>
+
+<div class="example" markdown="1">
+A course setting says the final test can be retaken only after the learner has studied every section again. The server did not check it; the page kept the studied sections in the memory of the open tab. After a reload the list was empty. Now the server records studied sections, and the response says `retake_allowed: false` with reason `sections_not_restudied`.
+
+<p class="check">Reload the page and call the retake endpoint directly, bypassing the page: the server refuses with the same reason code.</p>
+</div>
+
+### <a id="rule-15"></a>15. Three failed patches mean a design change
 
 <div class="rule" markdown="1">
 If three patch attempts did not fix a defect, the agent stops and proposes an architecture change instead of a fourth patch. The proposal names what is missing: a state, a transition, an owner of a decision, a way out of a wait.
@@ -280,6 +295,7 @@ A network error in the browser means the browser could not read the operation, n
 | 11. Failed once | revert the fix; the new test must fail |
 | 12. Screen | grep the frontend for server statuses in `useState`, `setTimeout` around a status, entity state in `localStorage` |
 | 13. Order | deliver the response before and after the user's action; the results match |
+| 14. Server decides | call the endpoint directly with a forbidden action; the server refuses with a reason code |
 
 Every check has a case on which it must fail: a planted import, a planted status list, a planted string comparison. One question goes to every diff: **does this change add a second way to compute a fact the system already stores?**
 
@@ -289,4 +305,4 @@ This is one way to build the environment I described in [Agent Comfort]({% post_
 
 ## Article history
 
-- **22 October 2026:** first version, from my LinkedIn post: the Phoenix history, behavior cards, fourteen rules with an example and a check for each, a state machine.
+- **22 October 2026:** first version, from my LinkedIn post: the Phoenix history, behavior cards, fifteen rules with an example and a check for each, a state machine.
