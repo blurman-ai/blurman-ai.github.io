@@ -40,11 +40,18 @@ starting point. Keep one article that can grow through later additions.
   production artifacts. State concurrency and failed-persistence limits explicitly.
 - Keep a stable `/clean-contour/` URL, a visible revision date, and a dated update log.
 - Future changes name the added evidence and do not silently replace published claims.
+- Follow-up request on 2026-10-22: add concrete examples. Each of the ten principles
+  now has an illustrative situation, an application of the rule, and a way to verify
+  the resulting behavior. These are teaching examples, not additional incident claims.
 
 ## Verification and outcome
 
 - APPLIED: English article with ten principles, Phoenix history, behavior card, state
   machine example, frontend mapping, practical checks, and article history.
+- APPLIED: ten additional examples, one per principle: persisted reviewer verdict,
+  shared assessment policy, parser recovery, late provider response, package boundaries,
+  rate-limit reason codes, failed commit, kind dispatch, migration adapter, and the
+  architecture proposal after three patches. Each includes an observable check.
 - APPLIED: audit-derived clarification that one state setter is insufficient unless
   transition decisions have one owner too. Included contract types, structured reason
   metadata, explicit missing-content values, and recovery owners for waiting states.

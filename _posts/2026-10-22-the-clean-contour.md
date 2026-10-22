@@ -53,6 +53,8 @@ The real card also needs concrete examples, the source of each behavior, and dec
 
 ## Ten rules inside the contour
 
+The examples under these rules are illustrative. They show how to apply the principles; they are not reports about the current implementation of a product.
+
 ### 1. State is a stored field with declared values and transitions
 
 An entity has a state. Its possible values are declared once, along with a transition table. Readers take that state from its authoritative field.
@@ -60,6 +62,8 @@ An entity has a state. Its possible values are declared once, along with a trans
 They do not reconstruct it from an event log, the existence of a neighboring row, a nonempty error field, or several booleans. If the API and frontend need the same values, their types come from the contract. A second handwritten list is a second place for the truth to change.
 
 Events remain useful for history, timing, and diagnosis. In this design, they do not decide the entity's current operational state. Event sourcing makes a different choice of authority; the rule here is a deliberate choice for the contour.
+
+**Example.** A reviewer changes an attempt's result from `needs_review` to `passed`. The attempt page and the manager's dashboard both read that stored result. Rebuilding an analytics report cannot turn it back into `needs_review` because an older event says so. A useful test records the reviewer's decision, rebuilds the report, and checks that both views still show `passed`.
 
 ### 2. One function owns the transition and the decision behind it
 
@@ -69,6 +73,8 @@ There is a trap here: seven callers can compute seven different verdicts and pas
 
 Concurrent callers must not both advance from the same old state. The transaction needs a mechanism such as a row lock or a conditional update that detects a competing write.
 
+**Example.** An automatic assessment supplies a score and a flag saying human review is required. The attempt owner applies the policy: even a high score leaves the result in `needs_review` until the reviewer decides. The worker, HTTP endpoint, and retry handler all submit assessment facts to that owner. Send the same facts through each entry point and check that the stored result is identical.
+
 ### 3. Every wait has a declared way to end
 
 An external call can fail, time out, or outlive the worker making it. Each case needs a declared transition and a process responsible for taking it.
@@ -76,6 +82,8 @@ An external call can fail, time out, or outlive the worker making it. Each case 
 A timeout in the HTTP client covers one wait. A worker killed after storing `running` needs recovery outside that worker: for example, an expiring lease and a watchdog. The watchdog calls the same state owner. A stale worker cannot later overwrite the recovered result.
 
 The same question applies to `queued`, `pending`, and `processing`: who moves the entity out if the process that was supposed to do the work disappears?
+
+**Example.** A document parser claims a job with a two-minute lease and then crashes. After the lease expires, a watchdog asks the job owner to move `processing` to `failed` with reason `lease_expired`. The document page can now offer a retry. Test this by killing the parser after the claim; the recovery must happen even when no browser tab is open.
 
 ### 4. Every transition has a test
 
@@ -85,11 +93,15 @@ Rejection needs a control case: attempt a forbidden transition and verify that i
 
 A contract test uses one payload on both sides of a boundary. A mock that repeats what the producer is expected to send cannot establish that the real consumer understands it.
 
+**Example.** A provider starts computing a result, its deadline expires, and the result arrives late. A test controls the clock, takes `running → failed` with `provider_timeout`, and then delivers the result. It checks that the late completion is rejected, the state remains `failed`, and no successful result is published. A separate test delivers the result before the deadline and checks `succeeded`.
+
 ### 5. The entity's code lives in one package
 
 The state declaration, transition rules, and owner have a clear home. Other packages use its public operations. An import contract blocks access to internal state writers.
 
 That boundary is part of the design. A comment saying “do not write this field directly” leaves the next agent free to find a convenient assignment elsewhere. An executable dependency rule makes that route visible as a failure.
+
+**Example.** The `attempts` package exposes `record_answer` and `review_result`. A reporting package may read its public view, but it cannot import the internal state writer or update the attempt through an ORM model. Give the dependency check a fixture where reporting imports that writer: it must reject the import. Ordinary use of the public read interface must pass.
 
 ### 6. Reason codes carry meaning; message text does not
 
@@ -99,6 +111,8 @@ No decision reads the error message text. Messages can change with translation o
 
 This applies beyond errors. A missing document section needs a declared value such as `fill: missing`. The renderer can print “Requires clarification.” Changing that label must not change whether the section counts as missing.
 
+**Example.** A provider returns “Too many requests” today and “Rate limit exceeded” tomorrow. The provider adapter maps the structured response status to `provider_rate_limited`. Its catalog entry declares the family and retry policy. The retry handler reads those declared properties. Test two responses with the same status and different messages: the retry decision must stay the same.
+
 ### 7. Unknown values and failed writes stop progress
 
 An unknown state cannot quietly mean success. A failed write cannot be reported as a completed transition. An expired lease cannot leave its former owner free to keep changing the entity.
@@ -107,17 +121,23 @@ An unknown state cannot quietly mean success. A failed write cannot be reported 
 
 The property is that uncertainty never grants permission to continue as if the operation succeeded.
 
+**Example.** An assessment has produced a score, but the database rejects the transaction that would save it. The service reports that the result could not be saved and does not send a “passed” notification. Recovery retries the operation using its request identifier. Inject a commit failure and check both boundaries: no successful result in storage, and no success notification sent outside the service.
+
 ### 8. Code for one kind knows nothing about other kinds
 
 A course handler does not keep asking whether it is actually handling a trainer. A trainer handler does not contain branches for documents. Dispatch happens at a declared boundary, using an explicit kind from the contract. Inside that boundary, each implementation works with its own kind.
 
 The caller does not guess the kind from an identifier prefix, a unit of volume, a title, or the presence of a field. Adding another kind should not require editing a growing chain of guesses throughout the system.
 
+**Example.** An assignment response declares `kind: trainer`. A dispatcher selects the trainer handler, which knows about attempts and assessments. A document handler knows about versions and acknowledgment. Renaming the trainer or changing its identifier cannot select the document handler. Test dispatch with the same declared kind and several titles and identifiers; selection must depend only on the kind.
+
 ### 9. The clean and old paths are isolated
 
 The clean contour does not call the old implementation, and the old implementation does not call into its internals. Every necessary migration bridge is a named exception in the import contract, with a removal condition tied to the old path.
 
 This gives migration a visible boundary. An exception can be reviewed and removed. An ordinary import of a convenient legacy helper can quietly bring the old design back into the room.
+
+**Example.** During migration, a named adapter reads an old assignment record and converts it to the new input contract. The import contract permits that adapter alone to read the legacy schema. It does not permit the new attempt handler to invoke the old attempt engine. The exception names its removal condition: all assignments have been migrated. A direct import of the old engine must fail the dependency check.
 
 ### 10. Three failed patches trigger an architecture proposal
 
@@ -126,6 +146,8 @@ If three patch attempts have not fixed a defect, the agent stops and proposes an
 The proposal has to name the missing concept or broken ownership: a state that does not exist, an undeclared transition, a decision made by several readers, a wait without an owner. “Refactor this function” is not enough.
 
 Three is the stopping rule I use. It is not a measured universal optimum. Its purpose is to force the question that the agent in the opening story never asked.
+
+**Example.** An upload keeps showing “Processing.” Three patches add a browser timeout, another poll, and a retry on page reload. The defect returns after a worker restart. Before patch four, the agent proposes a durable processing job, a lease, and a declared expiry transition owned by a watchdog. Acceptance becomes concrete: kill the worker, keep the browser closed, then reopen it and read the recovered state.
 
 ## A small state machine
 
@@ -178,4 +200,4 @@ When the next requirement arrives, the route is explicit: change the declared mo
 
 ## Article history
 
-- **22 October 2026:** Initial version, expanded from my LinkedIn post: the Phoenix history, behavior cards, ten principles, and an illustrative state machine.
+- **22 October 2026:** Initial version, expanded from my LinkedIn post: the Phoenix history, behavior cards, ten principles with an example and a check for each, and an illustrative state machine.
