@@ -3,7 +3,7 @@ layout: post
 title: "A clean room for coding agents"
 date: 2026-10-22
 permalink: /clean-room/
-description: "Ten rules for replacing legacy code with a coding agent: behavior cards instead of old code, stored state, one writer, a failure state for every wait."
+description: "Fourteen rules for replacing legacy code with a coding agent: behavior cards instead of old code, stored state, one writer, a failure state for every wait."
 excerpt: "Phoenix used a clean room to build a compatible BIOS. I use the same separation to keep a coding agent from repeating the code it is supposed to replace."
 ---
 
@@ -15,9 +15,9 @@ I hide old code from my coding agent for another reason: it repeats whatever it 
 
 A bug comes in: a user's attempt hangs on step one. The agent fixes it where it hangs. One more condition, one more function that computes the same state its own way. In one day the agent merged four patches into one function. That function derived the attempt's state from the event log across seven tables. The next day the agent wrote that it had never stopped to ask where the attempt keeps its state. The answer was nowhere, and it had been in front of the agent since day one.
 
-This happened right next to a clean room we had built a month earlier. There the agent writes new code from cards that describe the old behavior and never opens the old code. Ten rules hold inside the clean room, and each violation can be found with grep or with one question about the diff.
+This happened right next to a clean room we had built a month earlier. There the agent writes new code from cards that describe the old behavior and never opens the old code. Fourteen rules hold inside the clean room, and each violation can be found with grep or with one question about the diff.
 
-## The ten rules
+## The fourteen rules
 
 <ol class="rules-summary">
   <li><a href="#rule-1">State is a stored field with a declared list of values and a transition table.</a></li>
@@ -29,7 +29,11 @@ This happened right next to a clean room we had built a month earlier. There the
   <li><a href="#rule-7">An unknown value, a failed write or an expired lock ends in a failure state.</a></li>
   <li><a href="#rule-8">Code of one kind knows nothing about other kinds.</a></li>
   <li><a href="#rule-9">The new code does not call the old code, and the old code does not call the new.</a></li>
-  <li><a href="#rule-10">Three failed patches: stop and propose an architecture change.</a></li>
+  <li><a href="#rule-10">Parts are accepted separately: a defect in one part does not fail the whole.</a></li>
+  <li><a href="#rule-11">Every check has failed at least once on a real defect.</a></li>
+  <li><a href="#rule-12">The screen draws the state the server returned.</a></li>
+  <li><a href="#rule-13">The outcome does not depend on the order of responses.</a></li>
+  <li><a href="#rule-14">Three failed patches: stop and propose an architecture change.</a></li>
 </ol>
 
 ## How the clean room works
@@ -43,7 +47,7 @@ This happened right next to a clean room we had built a month earlier. There the
   <div class="arrow">→</div>
   <div class="step"><strong>Implementer</strong>never opens the old code</div>
   <div class="arrow">→</div>
-  <div class="step"><strong>New code</strong>under the ten rules</div>
+  <div class="step"><strong>New code</strong>under the fourteen rules</div>
 </div>
 
 A card describes one operation from the outside: input, result, failures, and what must stay true. It does not name helpers, tables or the call order of the old code.
@@ -63,7 +67,7 @@ A card describes one operation from the outside: input, result, failures, and wh
 A card that says "call this helper, then check that table" carries the old design across the boundary.
 </div>
 
-Phoenix's founder Neil J. Colvin describes the process in the foreword to *System BIOS for IBM PC/XT/AT Computers and Compatibles* (Phoenix Technologies, Addison-Wesley, 2nd ed., ISBN 0-201-51806-6, p. xviii). The ten rules below are mine, not Phoenix's.
+Phoenix's founder Neil J. Colvin describes the process in the foreword to *System BIOS for IBM PC/XT/AT Computers and Compatibles* (Phoenix Technologies, Addison-Wesley, 2nd ed., ISBN 0-201-51806-6, p. xviii). The rules below are mine, not Phoenix's.
 
 ## Rules
 
@@ -175,7 +179,55 @@ During migration, one named adapter reads old assignment records and converts th
 <p class="check">A direct import of the old engine from the new attempt handler fails the dependency check.</p>
 </div>
 
-### <a id="rule-10"></a>10. Three failed patches mean a design change
+### <a id="rule-10"></a>10. Parts are accepted separately
+
+<div class="rule" markdown="1">
+A defect in one part does not fail the whole if the other parts can be accepted. Whether a part is required comes from its type and the plan, not from the place where a check failed. A rejected part keeps its reason code.
+</div>
+
+<div class="example" markdown="1">
+A course is assembled from four modules. The model returns no text for the quiz module. The three other modules are accepted; the quiz is `failed` with `empty_model_response`, and the course shows which part needs another run. If the plan marks the quiz as required, the whole course is `failed` with the same reason.
+
+<p class="check">Plant an empty response for one optional part: the other parts are published, and the rejected part has its reason code.</p>
+</div>
+
+### <a id="rule-11"></a>11. Every check has failed once
+
+<div class="rule" markdown="1">
+Every new test and scenario fails at least once on a real defect: revert the fix or plant the defect, and the check must go red. A check measures the visible result, not a sign that code ran: the answer to the question, not status 200; the border color in focus, not an internal variable of a library. A scenario that passes because of the environment (a stale index, data from a previous run, a cache) proves nothing, so it also runs on a clean environment.
+</div>
+
+<div class="example" markdown="1">
+A test for a timeout fix passes. With the fix reverted it still passes, because it only checks that the endpoint returned 200. The test is rewritten to read the stored state: `failed` with `provider_timeout`. Now it fails on the reverted code and passes on the fix.
+
+<p class="check">The pull request shows a red run of the new test on the reverted code and a green run on the fix.</p>
+</div>
+
+### <a id="rule-12"></a>12. The screen draws what the server returned
+
+<div class="rule" markdown="1">
+The state of an entity stored on the server comes in one field of the response. The browser does not assemble it from flags, timers, effects or its own storage. The browser keeps only its own state: an open panel, an unsent edit.
+</div>
+
+<div class="example" markdown="1">
+A draft page chose its step from five fields of three responses and a browser timer. Now the draft response carries `stage`, and the page maps each stage to a view through one table. Closing the tab and opening it on another device shows the same step.
+
+<p class="check">Open the page in each stage with empty browser storage: the view matches the stage from the response.</p>
+</div>
+
+### <a id="rule-13"></a>13. The outcome does not depend on the order of responses
+
+<div class="rule" markdown="1">
+If a response writes to fields that the user can also change, those fields are locked until the response arrives, or a precedence rule is declared. The speed of an external system does not change the result.
+</div>
+
+<div class="example" markdown="1">
+The user edits a draft's title while the model is still generating the draft. The generated title arrives after the edit. The declared rule: the user's edit wins, and generated values fill only fields the user has not touched.
+
+<p class="check">Deliver the model response before and after the user's edit: the final title is the user's in both cases.</p>
+</div>
+
+### <a id="rule-14"></a>14. Three failed patches mean a design change
 
 <div class="rule" markdown="1">
 If three patch attempts did not fix a defect, the agent stops and proposes an architecture change instead of a fourth patch. The proposal names what is missing: a state, a transition, an owner of a decision, a way out of a wait.
@@ -224,6 +276,10 @@ A network error in the browser means the browser could not read the operation, n
 | 5, 9. Boundaries | an import contract with a forbidden import for each boundary; the list of bridges only shrinks |
 | 6. Reason codes | grep for `in str(exc)`, `.includes(message)`, `startswith` on codes |
 | 8. Kinds | grep for `startswith` on identifiers and comparisons with titles |
+| 10. Parts | a planted defect in one optional part; the other parts are still accepted |
+| 11. Failed once | revert the fix; the new test must fail |
+| 12. Screen | grep the frontend for server statuses in `useState`, `setTimeout` around a status, entity state in `localStorage` |
+| 13. Order | deliver the response before and after the user's action; the results match |
 
 Every check has a case on which it must fail: a planted import, a planted status list, a planted string comparison. One question goes to every diff: **does this change add a second way to compute a fact the system already stores?**
 
@@ -233,4 +289,4 @@ This is one way to build the environment I described in [Agent Comfort]({% post_
 
 ## Article history
 
-- **22 October 2026:** first version, from my LinkedIn post: the Phoenix history, behavior cards, ten rules with an example and a check for each, a state machine.
+- **22 October 2026:** first version, from my LinkedIn post: the Phoenix history, behavior cards, fourteen rules with an example and a check for each, a state machine.

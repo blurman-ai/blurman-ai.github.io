@@ -93,3 +93,8 @@ from the main text, no reasoning paragraphs.
 - PASS: `jekyll build` with the locked gems. Screenshots in Chrome at 1100 px and 390 px;
   page width at 390 px equals the viewport.
 - Published: branch merged into `main` (the Pages source), URL `/clean-room/`.
+- APPLIED, same day, on the author's request: fourteen rules, matching the source rule set
+  (baseline `template/rules/16-clean-contour.md`, 14 principles). Added: parts accepted
+  separately, every check has failed once, the screen draws what the server returned,
+  the outcome does not depend on the order of responses; each with an example and a check.
+  "Three failed patches" moved to rule 14.
