@@ -1,6 +1,6 @@
 # #002 — A living article about clean rooms for coding agents
 
-**Status:** wip
+**Status:** completed
 **Priority:** maj
 **Created:** 2026-10-22
 **Started:** 2026-10-22
@@ -72,13 +72,24 @@ starting point. Keep one article that can grow through later additions.
   the article. `git diff --check` passed.
 - Browser QA unavailable: CUA returned "No browser is available". No visual review claimed.
 - Local preview: `http://127.0.0.1:4187/clean-room/` while the preview process runs.
-- Publication pending: the supplied workspace instructions require an explicit "yes"
-  before push. The prepared article can be reviewed before that final action.
+## Rewrite for publication, 2026-10-22
 
-## How to continue
+Request: rules as short and direct as in the LinkedIn post, examples visually separated
+from the main text, no reasoning paragraphs.
 
-The change is isolated in `/home/localadm/projects/blurman-ai-clean-contour`, branch
-`agent/clean-contour-article`, based on the site's `main` at `3e045ab`.
-After publication approval, refresh `origin/main`, integrate without overwriting newer
-work, publish via the Pages source branch (`main`, `/`), and verify the live article.
-Then record the deployment result and move this task to `completed/`.
+- APPLIED: the ten rule statements follow the LinkedIn wording; each rule is a framed block,
+  each example a separate "Example" block with a "Check" line.
+- APPLIED: a numbered summary of the ten rules after the introduction, linked to the rules.
+- APPLIED: a five-step figure of who sees what in a clean room; the behavior card and the
+  state machine are set as examples.
+- APPLIED: `assets/main.scss` overrides minima's stylesheet; it imports `minima` and adds
+  only classes used by this post (`rules-summary`, `rule`, `example`, `check`, `flow`).
+  On a phone the figure stacks vertically and tables scroll inside their own box.
+- REMOVED: the paragraphs explaining the rules, the event-sourcing note, the caveats
+  "illustrative, not a production specification" and "not a measured optimum", the
+  closing summary, and the claim that the examples are not drawn from a real product.
+- MODIFIED: the Phoenix source is a book citation with ISBN; the link to a reproduction
+  on dokumen.pub is removed.
+- PASS: `jekyll build` with the locked gems. Screenshots in Chrome at 1100 px and 390 px;
+  page width at 390 px equals the viewport.
+- Published: branch merged into `main` (the Pages source), URL `/clean-room/`.
