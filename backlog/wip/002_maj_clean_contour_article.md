@@ -1,14 +1,14 @@
-# #002 — A living article about the clean contour
+# #002 — A living article about clean rooms for coding agents
 
 **Status:** wip
 **Priority:** maj
 **Created:** 2026-10-22
 **Started:** 2026-10-22
-**Target:** `_posts/2026-10-22-the-clean-contour.md`
+**Target:** `_posts/2026-10-22-a-clean-room-for-coding-agents.md`
 
 ## Request
 
-Write an English article for Sergey's existing site about the clean contour: its history,
+Write an English article for Sergey's existing site about clean-room development: its history,
 examples, and principles. Use the author's LinkedIn post supplied on 2026-10-22 as the
 starting point. Keep one article that can grow through later additions.
 
@@ -34,11 +34,14 @@ starting point. Keep one article that can grow through later additions.
 
 ## Editorial decisions
 
-- Define "clean contour" as the author's term for the bounded replacement and its rules.
+- Use "clean room" for the development process and "new implementation" for its output.
+  On 2026-10-22 the author questioned "contour" as an English term; removed the literal
+  translation and the invented definition from the unpublished draft.
 - Preserve the supplied first-person incident; make no new claim about the live product.
 - Mark the transition table and behavior card as illustrative examples, not recovered
   production artifacts. State concurrency and failed-persistence limits explicitly.
-- Keep a stable `/clean-contour/` URL, a visible revision date, and a dated update log.
+- Keep a stable `/clean-room/` URL, a visible revision date, and a dated update log.
+  The earlier `/clean-contour/` preview was never published and needs no redirect.
 - Future changes name the added evidence and do not silently replace published claims.
 - Follow-up request on 2026-10-22: add concrete examples. Each of the ten principles
   now has an illustrative situation, an application of the rule, and a way to verify
@@ -63,12 +66,12 @@ starting point. Keep one article that can grow through later additions.
 - PASS: `BUNDLE_PATH=/tmp/blekher-blog-gems BUNDLE_FROZEN=true bundle3.2 exec jekyll build --trace`.
   Kept the existing Gemfile and lockfile unchanged. Missing Ruby headers were extracted
   under `/tmp` for dependency compilation; no system package installation was needed.
-- PASS: rendered `/clean-contour/index.html`, all ten rule headings, four tables,
+- PASS: rendered `/clean-room/index.html`, all ten rule headings, four tables,
   resolution of every local article link, homepage listing, and feed entry.
 - PASS: English-only content, stable permalink, and no internal audit references in
   the article. `git diff --check` passed.
 - Browser QA unavailable: CUA returned "No browser is available". No visual review claimed.
-- Local preview: `http://127.0.0.1:4187/clean-contour/` while the preview process runs.
+- Local preview: `http://127.0.0.1:4187/clean-room/` while the preview process runs.
 - Publication pending: the supplied workspace instructions require an explicit "yes"
   before push. The prepared article can be reviewed before that final action.
 

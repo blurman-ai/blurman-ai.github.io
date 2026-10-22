@@ -1,8 +1,8 @@
 ---
 layout: post
-title: "The clean contour: a clean room for coding agents"
+title: "A clean room for coding agents"
 date: 2026-10-22
-permalink: /clean-contour/
+permalink: /clean-room/
 description: "Behavior cards, explicit state, and ten rules for replacing legacy code without teaching a coding agent to repeat its design."
 excerpt: "Phoenix used a clean room to build a compatible BIOS. I use the same separation to keep a coding agent from repeating the architecture it is supposed to replace."
 ---
@@ -19,7 +19,7 @@ The answer was nowhere. It had been in front of the agent since day one.
 
 This happened right next to a clean room we had built a month earlier. There, the agent wrote new code from cards describing the old behavior and never opened the old implementation.
 
-I call the replacement built within that boundary a **clean contour**: a part of the system with its own state, contracts, and rules that can be checked. The clean room controls what the implementer can see. The contour defines what the resulting code is allowed to do.
+For coding agents, I use a **clean room** with an explicit architectural contract. The new implementation has its own state, public interfaces, and rules that can be checked. The clean-room process controls what the implementer can see. The architectural rules define what the resulting code is allowed to do.
 
 ## The history: Phoenix and the specification boundary
 
@@ -51,7 +51,7 @@ The real card also needs concrete examples, the source of each behavior, and dec
 
 “Call this helper, then check that table” carries the old design across the boundary. A card should give the implementer enough information to reproduce the required behavior without that instruction.
 
-## Ten rules inside the contour
+## Ten rules inside the clean room
 
 The examples under these rules are illustrative. They show how to apply the principles; they are not reports about the current implementation of a product.
 
@@ -61,7 +61,7 @@ An entity has a state. Its possible values are declared once, along with a trans
 
 They do not reconstruct it from an event log, the existence of a neighboring row, a nonempty error field, or several booleans. If the API and frontend need the same values, their types come from the contract. A second handwritten list is a second place for the truth to change.
 
-Events remain useful for history, timing, and diagnosis. In this design, they do not decide the entity's current operational state. Event sourcing makes a different choice of authority; the rule here is a deliberate choice for the contour.
+Events remain useful for history, timing, and diagnosis. In this design, they do not decide the entity's current operational state. Event sourcing makes a different choice of authority; storing the current state is a deliberate choice for this implementation.
 
 **Example.** A reviewer changes an attempt's result from `needs_review` to `passed`. The attempt page and the manager's dashboard both read that stored result. Rebuilding an analytics report cannot turn it back into `needs_review` because an older event says so. A useful test records the reviewer's decision, rebuilds the report, and checks that both views still show `passed`.
 
@@ -131,9 +131,9 @@ The caller does not guess the kind from an identifier prefix, a unit of volume, 
 
 **Example.** An assignment response declares `kind: trainer`. A dispatcher selects the trainer handler, which knows about attempts and assessments. A document handler knows about versions and acknowledgment. Renaming the trainer or changing its identifier cannot select the document handler. Test dispatch with the same declared kind and several titles and identifiers; selection must depend only on the kind.
 
-### 9. The clean and old paths are isolated
+### 9. The new and old implementations are isolated
 
-The clean contour does not call the old implementation, and the old implementation does not call into its internals. Every necessary migration bridge is a named exception in the import contract, with a removal condition tied to the old path.
+The new implementation does not call the old implementation, and the old implementation does not call into its internals. Every necessary migration bridge is a named exception in the import contract, with a removal condition tied to the old path.
 
 This gives migration a visible boundary. An exception can be reviewed and removed. An ordinary import of a convenient legacy helper can quietly bring the old design back into the room.
 
@@ -194,7 +194,7 @@ A check must fail on a known violating example. Otherwise a green result says li
 
 I also ask one question about each diff: **did this change add a new interpretation of a fact the system already owns?** A second status resolver, a second verdict function, or a second list of failure values deserves an answer before it becomes context for the next agent.
 
-This is one way to build the environment I described in [Agent Comfort]({% post_url 2026-10-11-your-agent-is-not-dumb-it-is-uncomfortable %}). The cards give the agent behavior to implement. The contour gives it a structure in which to work. The checks make departures visible.
+This is one way to build the environment I described in [Agent Comfort]({% post_url 2026-10-11-your-agent-is-not-dumb-it-is-uncomfortable %}). The cards give the agent behavior to implement. The architectural contract gives it a structure in which to work. The checks make departures visible.
 
 When the next requirement arrives, the route is explicit: change the declared model, add the transition if one is needed, and test the behavior. The architecture question comes before the fourth patch.
 
