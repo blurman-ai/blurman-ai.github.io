@@ -1,0 +1,184 @@
+---
+# Front matter tells Jekyll to compile this file. It overrides minima 2.5.1's
+# assets/main.scss and adds the styles used by long-form posts.
+---
+
+@import "minima";
+
+$accent: #2a7ae2;
+$card-border: #e3e6ea;
+$card-bg: #f7f9fb;
+$example-bg: #fbf7ee;
+$example-border: #e0b44c;
+$check-color: #2e7d4f;
+
+.post-content {
+  h2 {
+    margin-top: 2.2em;
+    padding-bottom: 0.25em;
+    border-bottom: 1px solid $card-border;
+  }
+
+  table {
+    font-size: 0.95em;
+  }
+}
+
+/* The numbered list of rules at the top of a post. */
+.rules-summary {
+  counter-reset: rule;
+  list-style: none;
+  margin: 1.5em 0;
+  padding: 0;
+
+  li {
+    counter-increment: rule;
+    position: relative;
+    margin: 0 0 0.6em;
+    padding: 0.55em 0.9em 0.55em 3em;
+    background: $card-bg;
+    border: 1px solid $card-border;
+    border-radius: 6px;
+
+    &::before {
+      content: counter(rule);
+      position: absolute;
+      left: 0.8em;
+      top: 0.55em;
+      width: 1.6em;
+      height: 1.6em;
+      line-height: 1.6em;
+      text-align: center;
+      font-size: 0.85em;
+      font-weight: 700;
+      color: #fff;
+      background: $accent;
+      border-radius: 50%;
+    }
+  }
+}
+
+/* One rule: the statement in a framed block. */
+.rule {
+  margin: 0 0 1em;
+  padding: 0.9em 1.1em;
+  border-left: 4px solid $accent;
+  background: $card-bg;
+  border-radius: 0 6px 6px 0;
+
+  p:last-child {
+    margin-bottom: 0;
+  }
+}
+
+/* An illustrative example, set apart from the rules. */
+.example {
+  margin: 0 0 2em;
+  padding: 0.9em 1.1em;
+  background: $example-bg;
+  border: 1px solid lighten($example-border, 20%);
+  border-left: 4px solid $example-border;
+  border-radius: 0 6px 6px 0;
+  font-size: 0.95em;
+
+  &::before {
+    content: "Example";
+    display: block;
+    margin-bottom: 0.4em;
+    font-size: 0.75em;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: darken($example-border, 25%);
+  }
+
+  p:last-child {
+    margin-bottom: 0;
+  }
+
+  table {
+    margin-bottom: 0.5em;
+    background: #fff;
+  }
+
+  .check {
+    margin-top: 0.6em;
+    padding-top: 0.6em;
+    border-top: 1px dashed lighten($example-border, 10%);
+
+    &::before {
+      content: "Check: ";
+      font-weight: 700;
+      color: $check-color;
+    }
+  }
+}
+
+/* Who sees what in a clean room. */
+.flow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 0.5em;
+  margin: 1.5em 0;
+
+  .step {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 0.6em 0.7em;
+    background: $card-bg;
+    border: 1px solid $card-border;
+    border-radius: 6px;
+    font-size: 0.82em;
+    line-height: 1.35;
+
+    strong {
+      display: block;
+      margin-bottom: 0.2em;
+    }
+  }
+
+  .step.boundary {
+    background: $accent;
+    border-color: $accent;
+    color: #fff;
+  }
+
+  .arrow {
+    align-self: center;
+    color: #888;
+  }
+}
+
+.article-meta {
+  color: #828282;
+  font-size: 0.9em;
+}
+
+@media (max-width: 600px) {
+  .post-content table {
+    display: block;
+    overflow-x: auto;
+    font-size: 0.85em;
+
+    th, td {
+      padding: 6px 8px;
+    }
+  }
+
+  .example {
+    padding: 0.8em 0.8em;
+  }
+
+  .flow .arrow {
+    display: none;
+  }
+
+  .flow {
+    flex-direction: column;
+  }
+
+  .flow .step {
+    font-size: 0.9em;
+  }
+}

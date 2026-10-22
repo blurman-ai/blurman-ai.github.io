@@ -3,155 +3,194 @@ layout: post
 title: "A clean room for coding agents"
 date: 2026-10-22
 permalink: /clean-room/
-description: "Behavior cards, explicit state, and ten rules for replacing legacy code without teaching a coding agent to repeat its design."
-excerpt: "Phoenix used a clean room to build a compatible BIOS. I use the same separation to keep a coding agent from repeating the architecture it is supposed to replace."
+description: "Ten rules for replacing legacy code with a coding agent: behavior cards instead of old code, stored state, one writer, a failure state for every wait."
+excerpt: "Phoenix used a clean room to build a compatible BIOS. I use the same separation to keep a coding agent from repeating the code it is supposed to replace."
 ---
 
-*First published 22 October 2026. Last updated 22 October 2026. This article will grow as I add examples and develop the principles.*
+<p class="article-meta">First published 22 October 2026. Last updated 22 October 2026. I will add examples and rules to this article over time.</p>
 
-In 1984, Phoenix built an IBM PC-compatible BIOS using a clean room. Engineers who studied the original described its behavior. Engineers who had never seen it wrote a new implementation from that description.
+In 1984 Phoenix Technologies built a BIOS compatible with the IBM PC without copying IBM's code. Engineers who had read the original wrote a specification. A programmer who had never seen IBM's code wrote the new BIOS from it.
 
-I hide old code from my coding agent for another reason: it repeats whatever it sees.
+I hide old code from my coding agent for another reason: it repeats whatever it sees. When an agent hits a wall in bad code, it patches, like the average author in its training data.
 
-A bug comes in: a user's attempt hangs on step one. The agent fixes it where it hangs. One more condition, one more function that computes the same state its own way. In one day, the agent merged four patches into one function. That function derived the attempt's state from the event log across seven tables. The next day, the agent wrote that it had never stopped to ask where the attempt kept its state.
+A bug comes in: a user's attempt hangs on step one. The agent fixes it where it hangs. One more condition, one more function that computes the same state its own way. In one day the agent merged four patches into one function. That function derived the attempt's state from the event log across seven tables. The next day the agent wrote that it had never stopped to ask where the attempt keeps its state. The answer was nowhere, and it had been in front of the agent since day one.
 
-The answer was nowhere. It had been in front of the agent since day one.
+This happened right next to a clean room we had built a month earlier. There the agent writes new code from cards that describe the old behavior and never opens the old code. Ten rules hold inside the clean room, and each violation can be found with grep or with one question about the diff.
 
-This happened right next to a clean room we had built a month earlier. There, the agent wrote new code from cards describing the old behavior and never opened the old implementation.
+## The ten rules
 
-For coding agents, I use a **clean room** with an explicit architectural contract. The new implementation has its own state, public interfaces, and rules that can be checked. The clean-room process controls what the implementer can see. The architectural rules define what the resulting code is allowed to do.
+<ol class="rules-summary">
+  <li><a href="#rule-1">State is a stored field with a declared list of values and a transition table.</a></li>
+  <li><a href="#rule-2">One function writes the state, in one transaction, and rejects any transition missing from the table.</a></li>
+  <li><a href="#rule-3">Every wait on an external call has a failure state.</a></li>
+  <li><a href="#rule-4">Every transition has a test.</a></li>
+  <li><a href="#rule-5">The entity's code lives in one package.</a></li>
+  <li><a href="#rule-6">A failure records its reason as a code from a list.</a></li>
+  <li><a href="#rule-7">An unknown value, a failed write or an expired lock ends in a failure state.</a></li>
+  <li><a href="#rule-8">Code of one kind knows nothing about other kinds.</a></li>
+  <li><a href="#rule-9">The new code does not call the old code, and the old code does not call the new.</a></li>
+  <li><a href="#rule-10">Three failed patches: stop and propose an architecture change.</a></li>
+</ol>
 
-## The history: Phoenix and the specification boundary
+## How the clean room works
 
-Phoenix's founder, Neil J. Colvin, describes the process in the foreword to *System BIOS for IBM PC/XT/AT Computers and Compatibles*. He dates the company's PC ROM BIOS breakthrough to May 1984. One group studied the BIOS's functionality and passed descriptions to engineers who had never seen it. That second group wrote the implementation. The purpose was compatibility without copying IBM's code. [Phoenix's own account, p. xviii](https://dokumen.pub/system-bios-for-ibm-pc-xt-at-computers-and-compatibles-the-complete-guide-to-rom-based-system-software-2nbsped-9780201518061-0201518066.html).
+<div class="flow">
+  <div class="step"><strong>Old system</strong>code, data, a running instance</div>
+  <div class="arrow">→</div>
+  <div class="step"><strong>Analyst</strong>reads the old code and runs the old system</div>
+  <div class="arrow">→</div>
+  <div class="step boundary"><strong>Behavior cards</strong>the only thing that crosses</div>
+  <div class="arrow">→</div>
+  <div class="step"><strong>Implementer</strong>never opens the old code</div>
+  <div class="arrow">→</div>
+  <div class="step"><strong>New code</strong>under the ten rules</div>
+</div>
 
-The useful idea is the boundary between discovering behavior and implementing it. The specification crosses that boundary. The old implementation stays behind.
+A card describes one operation from the outside: input, result, failures, and what must stay true. It does not name helpers, tables or the call order of the old code.
 
-In my work, that separation has an architectural purpose. I want to preserve the behavior users need while giving the agent room to choose a different structure. When the old code sits in the context, its helpers, exceptions, and workarounds become the examples from which the agent continues.
-
-The ten rules below are the rules I use for that replacement. They are not rules from Phoenix.
-
-## What crosses the boundary
-
-The analyst can read the old code, inspect data, and run the old system. The implementer gets behavior cards. A card describes an operation from the outside: its input, result, failures, and the conditions that must remain true.
-
-Here is an illustrative card for starting an attempt. It is a small teaching example, not a production specification.
+<div class="example" markdown="1">
 
 | Part | Description |
 |---|---|
 | Operation | Start an attempt |
-| Input | An authorized user, an assignment, and a request identifier |
-| Preconditions | Access is valid and the assignment allows another attempt |
+| Input | An authorized user, an assignment, a request identifier |
+| Preconditions | Access is valid; the assignment allows another attempt |
 | Success | One attempt exists in `queued`; repeating the same request returns that attempt |
-| Refusal | A declared reason code explains why the attempt cannot start |
-| Concurrency | Two deliveries of the same request cannot create two attempts |
-| Observation | The caller can read the stored state and, after failure, its reason code |
+| Refusal | A reason code from the catalog says why the attempt cannot start |
+| Concurrency | Two deliveries of the same request create one attempt |
+| Observation | The caller reads the stored state and, after a failure, its reason code |
 
-The real card also needs concrete examples, the source of each behavior, and decisions about ambiguous cases. An accidental legacy behavior must be identified before someone turns it into a requirement. If the evidence is missing, the card has a gap to resolve.
+A card that says "call this helper, then check that table" carries the old design across the boundary.
+</div>
 
-“Call this helper, then check that table” carries the old design across the boundary. A card should give the implementer enough information to reproduce the required behavior without that instruction.
+Phoenix's founder Neil J. Colvin describes the process in the foreword to *System BIOS for IBM PC/XT/AT Computers and Compatibles* (Phoenix Technologies, Addison-Wesley, 2nd ed., ISBN 0-201-51806-6, p. xviii). The ten rules below are mine, not Phoenix's.
 
-## Ten rules inside the clean room
+## Rules
 
-The examples under these rules are illustrative. They show how to apply the principles; they are not reports about the current implementation of a product.
+### <a id="rule-1"></a>1. State is a stored field
 
-### 1. State is a stored field with declared values and transitions
+<div class="rule" markdown="1">
+An entity's state is a stored field with a declared list of values and a transition table, declared once in code. No code derives it from the event log, from whether rows exist, or from a neighbor table. The API returns the stored state; the frontend draws from it. If the frontend needs the list of values, it gets it from the API contract.
+</div>
 
-An entity has a state. Its possible values are declared once, along with a transition table. Readers take that state from its authoritative field.
+<div class="example" markdown="1">
+A reviewer changes an attempt's result from `needs_review` to `passed`. The attempt page and the manager's dashboard both read the stored result. Rebuilding an analytics report cannot bring back `needs_review` from an older event.
 
-They do not reconstruct it from an event log, the existence of a neighboring row, a nonempty error field, or several booleans. If the API and frontend need the same values, their types come from the contract. A second handwritten list is a second place for the truth to change.
+<p class="check">Record the reviewer's decision, rebuild the report, and check that both views show <code>passed</code>.</p>
+</div>
 
-Events remain useful for history, timing, and diagnosis. In this design, they do not decide the entity's current operational state. Event sourcing makes a different choice of authority; storing the current state is a deliberate choice for this implementation.
+### <a id="rule-2"></a>2. One function writes the state
 
-**Example.** A reviewer changes an attempt's result from `needs_review` to `passed`. The attempt page and the manager's dashboard both read that stored result. Rebuilding an analytics report cannot turn it back into `needs_review` because an older event says so. A useful test records the reviewer's decision, rebuilds the report, and checks that both views still show `passed`.
+<div class="rule" markdown="1">
+One function writes the state, in one transaction with the data of the transition, and rejects any transition missing from the table. It also owns the decision: callers pass facts, the function applies the rule. Seven callers that compute seven verdicts and hand them to one setter still have seven owners. Two concurrent callers cannot both move the entity from the same old state.
+</div>
 
-### 2. One function owns the transition and the decision behind it
+<div class="example" markdown="1">
+An automatic assessment reports a score and a flag that human review is required. The worker, the HTTP endpoint and the retry handler all send these facts to the attempt's owner. The owner keeps the result in `needs_review` even with a high score until the reviewer decides.
 
-One function writes the state, in one transaction. It checks the current state, rejects a transition missing from the table, and writes the associated result or reason together with the new state.
+<p class="check">Send the same facts through each entry point; the stored result is identical.</p>
+</div>
 
-There is a trap here: seven callers can compute seven different verdicts and pass them to one setter. The assignment has one owner, but the decision still has seven. The rule includes ownership of the decision. Callers provide facts; the owner applies the declared rule.
+### <a id="rule-3"></a>3. Every wait has a failure state
 
-Concurrent callers must not both advance from the same old state. The transaction needs a mechanism such as a row lock or a conditional update that detects a competing write.
+<div class="rule" markdown="1">
+Every wait on an external call (a model, the network, a queue, a background worker) has a failure state. Failure and timeout are declared transitions. A process outside the waiting worker moves the entity out if that worker dies. No entity is left without a next step.
+</div>
 
-**Example.** An automatic assessment supplies a score and a flag saying human review is required. The attempt owner applies the policy: even a high score leaves the result in `needs_review` until the reviewer decides. The worker, HTTP endpoint, and retry handler all submit assessment facts to that owner. Send the same facts through each entry point and check that the stored result is identical.
+<div class="example" markdown="1">
+A document parser claims a job with a two-minute lease and crashes. After the lease expires, a watchdog asks the job's owner to move it from `processing` to `failed` with reason `lease_expired`. The document page offers a retry.
 
-### 3. Every wait has a declared way to end
+<p class="check">Kill the parser after the claim, with no browser tab open. The job reaches <code>failed</code> on its own.</p>
+</div>
 
-An external call can fail, time out, or outlive the worker making it. Each case needs a declared transition and a process responsible for taking it.
+### <a id="rule-4"></a>4. Every transition has a test
 
-A timeout in the HTTP client covers one wait. A worker killed after storing `running` needs recovery outside that worker: for example, an expiring lease and a watchdog. The watchdog calls the same state owner. A stale worker cannot later overwrite the recovered result.
+<div class="rule" markdown="1">
+Every allowed transition has a test: starting state, event, stored result. Failure transitions too. A forbidden transition has a test that it changes nothing. A contract test sends one payload through both sides of a boundary; a mock does not count as the other side.
+</div>
 
-The same question applies to `queued`, `pending`, and `processing`: who moves the entity out if the process that was supposed to do the work disappears?
+<div class="example" markdown="1">
+A provider's deadline expires, and its result arrives late. The test controls the clock: `running → failed` with `provider_timeout`, then the late result is rejected and nothing is published. A second test delivers the result before the deadline and gets `succeeded`.
 
-**Example.** A document parser claims a job with a two-minute lease and then crashes. After the lease expires, a watchdog asks the job owner to move `processing` to `failed` with reason `lease_expired`. The document page can now offer a retry. Test this by killing the parser after the claim; the recovery must happen even when no browser tab is open.
+<p class="check">Each row of the transition table has its test; a transition outside the table is rejected.</p>
+</div>
 
-### 4. Every transition has a test
+### <a id="rule-5"></a>5. The entity's code lives in one package
 
-For each declared edge, a test checks the starting state, the event or command, and the stored result. Failure transitions get tests too.
+<div class="rule" markdown="1">
+The state, the transition table and the writer live in one package. Other packages use its public operations. An import contract blocks writes to its state from outside.
+</div>
 
-Rejection needs a control case: attempt a forbidden transition and verify that it changes nothing. Test the boundaries that matter to the operation, including duplicate delivery, timeout, and a late result after lease expiry.
+<div class="example" markdown="1">
+The `attempts` package exposes `record_answer` and `review_result`. The reporting package reads the public view but cannot import the internal writer or update the attempt through the ORM model.
 
-A contract test uses one payload on both sides of a boundary. A mock that repeats what the producer is expected to send cannot establish that the real consumer understands it.
+<p class="check">A fixture where reporting imports the writer fails the import check; use of the public view passes.</p>
+</div>
 
-**Example.** A provider starts computing a result, its deadline expires, and the result arrives late. A test controls the clock, takes `running → failed` with `provider_timeout`, and then delivers the result. It checks that the late completion is rejected, the state remains `failed`, and no successful result is published. A separate test delivers the result before the deadline and checks `succeeded`.
+### <a id="rule-6"></a>6. A failure has a reason code
 
-### 5. The entity's code lives in one package
+<div class="rule" markdown="1">
+A failure records its reason as a code from one catalog. The catalog declares each code's family and whether it can be retried. No decision reads the error message text or the spelling of a code. The same applies to content: a missing section is a declared value, and the label shown to the user is only a label.
+</div>
 
-The state declaration, transition rules, and owner have a clear home. Other packages use its public operations. An import contract blocks access to internal state writers.
+<div class="example" markdown="1">
+A provider answers "Too many requests" today and "Rate limit exceeded" tomorrow. The adapter maps the response status to `provider_rate_limited`; the catalog says it is retryable. A document section without text stores `fill: missing`; the renderer prints "Requires clarification".
 
-That boundary is part of the design. A comment saying “do not write this field directly” leaves the next agent free to find a convenient assignment elsewhere. An executable dependency rule makes that route visible as a failure.
+<p class="check">Two responses with the same status and different messages get the same retry decision. Changing the label does not change which sections count as missing.</p>
+</div>
 
-**Example.** The `attempts` package exposes `record_answer` and `review_result`. A reporting package may read its public view, but it cannot import the internal state writer or update the attempt through an ORM model. Give the dependency check a fixture where reporting imports that writer: it must reject the import. Ordinary use of the public read interface must pass.
+### <a id="rule-7"></a>7. Unknown is not success
 
-### 6. Reason codes carry meaning; message text does not
+<div class="rule" markdown="1">
+An unknown value, a failed write or an expired lock ends in a failure state. If the failure itself cannot be stored, the operation reports that it failed, stops dependent work, and recovery finishes the transition later.
+</div>
 
-A failure records its reason as a code from one catalog. If callers need a failure family or a `retryable` property, the catalog declares them. Callers do not recover those properties from a code's spelling.
+<div class="example" markdown="1">
+An assessment has a score, but the database rejects the transaction that saves it. The service reports that the result was not saved and sends no "passed" notification. Recovery repeats the operation by its request identifier.
 
-No decision reads the error message text. Messages can change with translation or better wording. The code carries the meaning.
+<p class="check">Inject a commit failure: storage has no successful result, and no success notification leaves the service.</p>
+</div>
 
-This applies beyond errors. A missing document section needs a declared value such as `fill: missing`. The renderer can print “Requires clarification.” Changing that label must not change whether the section counts as missing.
+### <a id="rule-8"></a>8. One kind knows nothing about other kinds
 
-**Example.** A provider returns “Too many requests” today and “Rate limit exceeded” tomorrow. The provider adapter maps the structured response status to `provider_rate_limited`. Its catalog entry declares the family and retry policy. The retry handler reads those declared properties. Test two responses with the same status and different messages: the retry decision must stay the same.
+<div class="rule" markdown="1">
+Code of one kind knows nothing about other kinds. No "what type am I" checks. The kind is a declared field; nobody guesses it from an identifier prefix, a title, a unit or the presence of a field. A dispatcher picks the handler by that field.
+</div>
 
-### 7. Unknown values and failed writes stop progress
+<div class="example" markdown="1">
+An assignment response carries `kind: trainer`. The dispatcher selects the trainer handler, which knows attempts and assessments. The document handler knows versions and acknowledgment. Renaming the trainer or changing its identifier cannot send it to the document handler.
 
-An unknown state cannot quietly mean success. A failed write cannot be reported as a completed transition. An expired lease cannot leave its former owner free to keep changing the entity.
+<p class="check">Dispatch the same kind with different titles and identifiers; the handler is always the same.</p>
+</div>
 
-“End in a failure state” needs a precise implementation. If the database is unavailable, the process cannot promise that it has stored `failed`. It must report the failed operation, stop dependent work, and leave a recovery mechanism able to finish the transition when storage returns.
+### <a id="rule-9"></a>9. New and old code do not call each other
 
-The property is that uncertainty never grants permission to continue as if the operation succeeded.
+<div class="rule" markdown="1">
+The new code does not call the old code, and the old code does not call the new. Every bridge is a named exception in the import contract and goes away with the old path.
+</div>
 
-**Example.** An assessment has produced a score, but the database rejects the transaction that would save it. The service reports that the result could not be saved and does not send a “passed” notification. Recovery retries the operation using its request identifier. Inject a commit failure and check both boundaries: no successful result in storage, and no success notification sent outside the service.
+<div class="example" markdown="1">
+During migration, one named adapter reads old assignment records and converts them to the new input. The import contract allows only this adapter to read the old schema; its removal condition is "all assignments migrated".
 
-### 8. Code for one kind knows nothing about other kinds
+<p class="check">A direct import of the old engine from the new attempt handler fails the dependency check.</p>
+</div>
 
-A course handler does not keep asking whether it is actually handling a trainer. A trainer handler does not contain branches for documents. Dispatch happens at a declared boundary, using an explicit kind from the contract. Inside that boundary, each implementation works with its own kind.
+### <a id="rule-10"></a>10. Three failed patches mean a design change
 
-The caller does not guess the kind from an identifier prefix, a unit of volume, a title, or the presence of a field. Adding another kind should not require editing a growing chain of guesses throughout the system.
+<div class="rule" markdown="1">
+If three patch attempts did not fix a defect, the agent stops and proposes an architecture change instead of a fourth patch. The proposal names what is missing: a state, a transition, an owner of a decision, a way out of a wait.
+</div>
 
-**Example.** An assignment response declares `kind: trainer`. A dispatcher selects the trainer handler, which knows about attempts and assessments. A document handler knows about versions and acknowledgment. Renaming the trainer or changing its identifier cannot select the document handler. Test dispatch with the same declared kind and several titles and identifiers; selection must depend only on the kind.
+<div class="example" markdown="1">
+An upload keeps showing "Processing". Three patches add a browser timeout, another poll and a retry on page reload; the defect returns after a worker restart. Before a fourth patch, the agent proposes a stored processing job with a lease and an expiry transition owned by a watchdog.
 
-### 9. The new and old implementations are isolated
-
-The new implementation does not call the old implementation, and the old implementation does not call into its internals. Every necessary migration bridge is a named exception in the import contract, with a removal condition tied to the old path.
-
-This gives migration a visible boundary. An exception can be reviewed and removed. An ordinary import of a convenient legacy helper can quietly bring the old design back into the room.
-
-**Example.** During migration, a named adapter reads an old assignment record and converts it to the new input contract. The import contract permits that adapter alone to read the legacy schema. It does not permit the new attempt handler to invoke the old attempt engine. The exception names its removal condition: all assignments have been migrated. A direct import of the old engine must fail the dependency check.
-
-### 10. Three failed patches trigger an architecture proposal
-
-If three patch attempts have not fixed a defect, the agent stops and proposes an architecture change before trying a fourth patch.
-
-The proposal has to name the missing concept or broken ownership: a state that does not exist, an undeclared transition, a decision made by several readers, a wait without an owner. “Refactor this function” is not enough.
-
-Three is the stopping rule I use. It is not a measured universal optimum. Its purpose is to force the question that the agent in the opening story never asked.
-
-**Example.** An upload keeps showing “Processing.” Three patches add a browser timeout, another poll, and a retry on page reload. The defect returns after a worker restart. Before patch four, the agent proposes a durable processing job, a lease, and a declared expiry transition owned by a watchdog. Acceptance becomes concrete: kill the worker, keep the browser closed, then reopen it and read the recovered state.
+<p class="check">Kill the worker, keep the browser closed, open it later: the page shows the recovered state.</p>
+</div>
 
 ## A small state machine
 
-Consider a background operation with four stored states: `queued`, `running`, `succeeded`, and `failed`. Creating it establishes `queued`. The following table is an illustrative design with no automatic retries.
+<div class="example" markdown="1">
+A background operation has four stored states. Creating it sets `queued`. There are no automatic retries.
 
 | From | Event | To | Reason |
 |---|---|---|---|
@@ -162,10 +201,6 @@ Consider a background operation with four stored states: `queued`, `running`, `s
 | `running` | Call deadline expires | `failed` | `provider_timeout` |
 | `running` | Worker lease expires | `failed` | `lease_expired` |
 
-The reason codes are declared values. Each row has a test. A transition absent from the table is rejected. A late provider response after `lease_expired` cannot turn `failed` into `succeeded`.
-
-The result and `succeeded` are committed together. If a provider also performs an external side effect, this database transaction alone cannot make the whole operation atomic. The behavior card must specify duplicate handling and recovery at that boundary too.
-
 The API returns the stored state and reason. The frontend maps them to a view:
 
 | State | View |
@@ -173,31 +208,29 @@ The API returns the stored state and reason. The frontend maps them to a view:
 | `queued` | Waiting to start |
 | `running` | In progress |
 | `succeeded` | Result |
-| `failed` | Failure, with an explanation selected by reason code |
+| `failed` | Failure, with an explanation chosen by reason code |
 
-The browser can have its own local state for an open panel or an unsent edit. It does not need a second account of the server operation's lifecycle. A network error means the browser could not read the operation; it does not establish that the operation failed.
+A network error in the browser means the browser could not read the operation, not that the operation failed.
+</div>
 
-## Making the principles checkable
+## How to find a violation
 
-Some rules fit a search. Others need syntax analysis, dependency checks, or a question about the diff.
-
-| Principle | A useful check |
+| Rule | Check |
 |---|---|
-| One declaration | Find handwritten copies of a state list outside the contract or generated code |
-| One owner | Find state assignments outside the owning module; review where transition decisions are made |
-| Bounded waiting | Require a deadline and a named recovery owner for each waiting state |
-| Structured meaning | Find decisions based on message text, display labels, or identifier prefixes |
-| Isolated paths | Enforce forbidden imports and an explicit list of migration exceptions |
-| Tested transitions | Exercise allowed edges and rejected edges, including races with recovery |
+| 1. Stored state | grep for status lists written by hand outside the declaration and the generated API types |
+| 2. One writer | grep for assignments to the state field outside its package |
+| 3. Failure state | every `queued`, `pending`, `running` has a deadline and a named process that ends it |
+| 4. Tests | a test per row of the transition table, plus one forbidden transition |
+| 5, 9. Boundaries | an import contract with a forbidden import for each boundary; the list of bridges only shrinks |
+| 6. Reason codes | grep for `in str(exc)`, `.includes(message)`, `startswith` on codes |
+| 8. Kinds | grep for `startswith` on identifiers and comparisons with titles |
 
-A check must fail on a known violating example. Otherwise a green result says little about whether the rule is being enforced. A broad grep is a search aid; it is not automatically an architecture gate.
+Every check has a case on which it must fail: a planted import, a planted status list, a planted string comparison. One question goes to every diff: **does this change add a second way to compute a fact the system already stores?**
 
-I also ask one question about each diff: **did this change add a new interpretation of a fact the system already owns?** A second status resolver, a second verdict function, or a second list of failure values deserves an answer before it becomes context for the next agent.
+The agent has one path left: a new value in the state list, a row in the transition table, a test for the transition.
 
-This is one way to build the environment I described in [Agent Comfort]({% post_url 2026-10-11-your-agent-is-not-dumb-it-is-uncomfortable %}). The cards give the agent behavior to implement. The architectural contract gives it a structure in which to work. The checks make departures visible.
-
-When the next requirement arrives, the route is explicit: change the declared model, add the transition if one is needed, and test the behavior. The architecture question comes before the fourth patch.
+This is one way to build the environment I described in [Agent Comfort]({% post_url 2026-10-11-your-agent-is-not-dumb-it-is-uncomfortable %}).
 
 ## Article history
 
-- **22 October 2026:** Initial version, expanded from my LinkedIn post: the Phoenix history, behavior cards, ten principles with an example and a check for each, and an illustrative state machine.
+- **22 October 2026:** first version, from my LinkedIn post: the Phoenix history, behavior cards, ten rules with an example and a check for each, a state machine.
