@@ -102,3 +102,32 @@ from the main text, no reasoning paragraphs.
   an internal issue), "three failed patches" is rule 15. A paragraph after the opening
   story from the author's team chat of 22.10.2026: a developer expected the model to know
   these principles already. The developer is not named.
+
+## Rewrite to match Habr, 2026-10-30
+
+Request (2026-10-30): bring the English post in line with the author's Habr article, in plain
+English. Habr's jokes stay out. Existing examples stay; the new example under rule 9 and the
+sample card are teaching examples. Not committed or published.
+
+Sources: https://habr.com/ru/articles/1101314/ (source of truth), `backlog/wip/001_maj_plain_english_pass.md`.
+
+- APPLIED: rewrite in the working tree: two projects, analyst and implementer, four ways the
+  old code is kept away, migration steps, rule order and numbers as on Habr, antigoal rule as a
+  separate section, ub-mode, weak-model measurement.
+- FIXED against Habr: "I rewrote" → "We rewrote" and "the same way" → "in a similar way" in the
+  excerpt; "I call" → "Claude and I called" a clean room; Phoenix "a programmer" → "others";
+  "expired lock" → "lost lock" (rule 7); "real defect" → "the defect it checks" (rule 11);
+  rule 14 now says that the order of responses does not change the result; `cancel_reason`
+  glossed as the reason for cancellation; "Check for a finished order" → "Completion check";
+  removed "Phoenix did it for legal reasons", which neither Habr nor the earlier post says;
+  added the card's missing line "What confirms it".
+- MATCHED, no change: 2 of 3 calls HTTP 500; 21 negation places; 2 + 3 + 2 days; three days on
+  the second project; six repositories; 36 runs and 36/31/25/18; 3 of 3 vs 0 of 3; four
+  then five `cancel_reason` checks; all fifteen rules in order.
+- APPLIED: 19 plain-English point edits. `tools/freq_check.py` was not changed; remaining words
+  under zipf 3.5 are names and technical terms, plus `hallucinate`, `negation` and `foreword`.
+- PASS: `jekyll build --trace` with locked gems in a temporary path. Gemfile and
+  lockfile unchanged. Ruby headers were extracted to a temporary path; no system packages.
+- PASS: 15 rule anchors plus `#antigoal`, all 16 summary links resolve, 6 tables, diff block with
+  removed and added lines, `post_url` resolves, no "contour" in the page. `git diff --check` clean.
+- PASS: headless Chrome at 390 px: page width equals the viewport, tables scroll inside their box.

@@ -3,41 +3,21 @@ layout: post
 title: "A clean room for coding agents"
 date: 2026-10-22
 permalink: /clean-room/
-description: "Fifteen rules for replacing legacy code with a coding agent: behavior cards instead of old code, stored state, one writer, a failure state for every wait."
-excerpt: "Phoenix used a clean room to build a compatible BIOS. I use the same separation to keep a coding agent from repeating the code it is supposed to replace."
+description: "How I replaced legacy code with coding agents: an analyst, an implementer who never sees the old code, behavior cards, fifteen rules, and a measurement on a weak model."
+excerpt: "Two of three API calls returned HTTP 500, and the agents kept patching. We rewrote the module with an agent that never saw the old code. Phoenix built a compatible BIOS in a similar way in 1984."
 ---
 
-<p class="article-meta">First published 22 October 2026. Last updated 22 October 2026. I will add examples and rules to this article over time.</p>
+<p class="article-meta">First published 22 October 2026. Last updated 30 October 2026. I will add examples and rules to this article over time. A Russian version is on <a href="https://habr.com/ru/articles/1101314/">Habr</a>.</p>
 
-In 1984 Phoenix Technologies built a BIOS compatible with the IBM PC without copying IBM's code. Engineers who had read the original wrote a specification. A programmer who had never seen IBM's code wrote the new BIOS from it.
+I inherited a B2B SaaS project at a stage every tech lead knows: "Almost done. Release in two weeks." Two of three API calls returned HTTP 500.
 
-I hide old code from my coding agent for another reason: it repeats whatever it sees. When an agent hits a wall in bad code, it patches, like the average author in its training data.
+The code held several generations of agent fixes. When someone found a bug, they asked an agent to fix it, and the agent added one more condition. An object's state was derived from indirect signs. In 21 places a handler learned its own kind by negation: not A and not B, so it must be mine. Agents saw these patterns in front of them and continued them.
 
-A bug comes in: a user's attempt hangs on step one. The agent fixes it where it hangs. One more condition, one more function that computes the same state its own way. In one day the agent merged four patches into one function. That function derived the attempt's state from the event log across seven tables. The next day the agent wrote that it had never stopped to ask where the attempt keeps its state. The answer was nowhere, and it had been in front of the agent since day one.
+Claude went into this code and came back confused. I had never seen it hallucinate so much on so little context, and it could not clearly answer half of my questions.
 
-This happened right next to a clean room we had built a month earlier. There the agent writes new code from cards that describe the old behavior and never opens the old code. Fifteen rules hold inside the clean room, and each violation can be found with grep or with one question about the diff.
+After two days I decided that fixing symptoms was pointless. We rewrote the module completely, recovering what the authors had intended from the few documents and the existing code. Three days went into a migration contract: algorithms and snapshots of inputs and outputs. Two more went into the new implementation. The algorithms described in prose what had to be done, not how to do it.
 
-An experienced developer on my team read the audit behind these rules and asked: shouldn't the model already know such principles, the way it knows clean code? His agent had told him it cannot guarantee good code and offered a narrow list of hard-coded checks. The model does not hold these principles. It continues the code in front of it, and it learned from code full of workarounds. So the rules are written down where the agent reads them, and checked on every change.
-
-## The fifteen rules
-
-<ol class="rules-summary">
-  <li><a href="#rule-1">State is a stored field with a declared list of values and a transition table.</a></li>
-  <li><a href="#rule-2">One function writes the state, in one transaction, and rejects any transition missing from the table.</a></li>
-  <li><a href="#rule-3">Every wait on an external call has a failure state.</a></li>
-  <li><a href="#rule-4">Every transition has a test.</a></li>
-  <li><a href="#rule-5">The entity's code lives in one package.</a></li>
-  <li><a href="#rule-6">A failure records its reason as a code from a list.</a></li>
-  <li><a href="#rule-7">An unknown value, a failed write or an expired lock ends in a failure state.</a></li>
-  <li><a href="#rule-8">Code of one kind knows nothing about other kinds.</a></li>
-  <li><a href="#rule-9">The new code does not call the old code, and the old code does not call the new.</a></li>
-  <li><a href="#rule-10">Parts are accepted separately: a defect in one part does not fail the whole.</a></li>
-  <li><a href="#rule-11">Every check has failed at least once on a real defect.</a></li>
-  <li><a href="#rule-12">The screen draws the state the server returned.</a></li>
-  <li><a href="#rule-13">The outcome does not depend on the order of responses.</a></li>
-  <li><a href="#rule-14">Whether an action is allowed is decided by the server.</a></li>
-  <li><a href="#rule-15">Three failed patches: stop and propose an architecture change.</a></li>
-</ol>
+Claude and I called the environment where an agent writes new code and cannot see the old code a clean room.
 
 ## How the clean room works
 
@@ -48,36 +28,80 @@ An experienced developer on my team read the audit behind these rules and asked:
   <div class="arrow">→</div>
   <div class="step boundary"><strong>Behavior cards</strong>the only thing that crosses</div>
   <div class="arrow">→</div>
-  <div class="step"><strong>Implementer</strong>never opens the old code</div>
+  <div class="step"><strong>Implementer</strong>never sees the old code</div>
   <div class="arrow">→</div>
   <div class="step"><strong>New code</strong>under the fifteen rules</div>
 </div>
 
-A card describes one operation from the outside: input, result, failures, and what must stay true. It does not name helpers, tables or the call order of the old code.
+I split the work between two agents.
+
+**The analyst** studied the old code, ran the system, and took snapshots of inputs, outputs and database changes. It wrote the results into behavior cards, one per operation. The cards together form the migration contract. Each line of a card is marked `measured`, `code` or `gap`.
 
 <div class="example" markdown="1">
 
-| Part | Description |
-|---|---|
-| Operation | Start an attempt |
-| Input | An authorized user, an assignment, a request identifier |
-| Preconditions | Access is valid; the assignment allows another attempt |
-| Success | One attempt exists in `queued`; repeating the same request returns that attempt |
-| Refusal | A reason code from the catalog says why the attempt cannot start |
-| Concurrency | Two deliveries of the same request create one attempt |
-| Observation | The caller reads the stored state and, after a failure, its reason code |
+| Part | Description | Mark |
+|---|---|---|
+| Input | An authorized user, an assignment, a request identifier | `code` |
+| Expected result | One attempt exists; repeating the same request returns that attempt | `measured` |
+| Artifacts and states | The attempt in `queued` | `measured` |
+| Codes | A reason code from the catalog says why the attempt cannot start | `code` |
+| What goes into the snapshot | The response, the attempt row | `measured` |
+| What confirms it | A snapshot from a run of the old system | `measured` |
+| Two deliveries of the same request at once | Unknown: not reproduced yet | `gap` |
 
 A card that says "call this helper, then check that table" carries the old design across the boundary.
 </div>
 
-Phoenix's founder Neil J. Colvin describes the process in the foreword to *System BIOS for IBM PC/XT/AT Computers and Compatibles* (Phoenix Technologies, Addison-Wesley, 2nd ed., ISBN 0-201-51806-6, p. xviii). The rules below are mine, not Phoenix's.
+**The implementer** wrote new code from the cards. It could not see the old code, and four things enforced that:
 
-## Rules
+- a ban in the task;
+- a separate session;
+- two linter bans: new code does not call old code, and old code does not call new code;
+- a borrowing guard that compares the old and new trees and prints only the places where they match.
+
+The migration itself worked like this:
+
+- Defects in working functions moved as they were, and were fixed inside the clean room.
+- Unused functions did not move.
+- We took a whole user scenario, from the incoming request to the result. After the old and new results matched, we switched the callers to the new implementation.
+- The old path was deleted after acceptance.
+
+In 1984 Phoenix Technologies built a BIOS compatible with the IBM PC in a similar way. Some engineers studied the original and wrote a specification. Others wrote the new BIOS from it without seeing IBM's code. Phoenix's founder Neil J. Colvin describes the process in the foreword to *System BIOS for IBM PC/XT/AT Computers and Compatibles* (Phoenix Technologies, Addison-Wesley, 2nd ed., ISBN 0-201-51806-6, p. xviii). This method is called clean room design. I hide old code from my coding agent for another reason: it repeats whatever it sees.
+
+## The second project
+
+A few days later I got a second project: a Rust backend and five Python services in separate repositories. A small feature needed matching changes in several places, and the contracts in the two languages stopped matching while the tests of all six components stayed green.
+
+With the same method, in three days, I moved the scenarios into one Python monolith and switched routing to it. Six repositories went to the archive. Calls between services changed from HTTP with JSON to function calls, and mypy now catches the places where contracts differ.
+
+## The fifteen rules
+
+Even in new code the agent will write workarounds, so the implementer works under a charter of fifteen rules. An experienced developer will find some of them elementary and some of them open to debate. The rules below are mine, not Phoenix's. Each violation can be found with grep or with one question about the diff.
+
+<ol class="rules-summary">
+  <li><a href="#rule-1">State is a stored field with a declared list of values and a transition table.</a></li>
+  <li><a href="#rule-2">One function writes the state, in one transaction, and rejects any transition missing from the table.</a></li>
+  <li><a href="#rule-3">Every wait on an external call has a failure state and a timeout.</a></li>
+  <li><a href="#rule-4">Allowed and forbidden transitions have tests.</a></li>
+  <li><a href="#rule-5">The entity's code lives in one package.</a></li>
+  <li><a href="#rule-6">A failure records its reason as a code from a list.</a></li>
+  <li><a href="#rule-7">An unknown value, a failed write or a lost lock ends in a failure.</a></li>
+  <li><a href="#rule-8">Parts are accepted separately. The contract says which parts are required.</a></li>
+  <li><a href="#rule-9">The kind of a task is declared as data. No handler decides "not A and not B, so mine".</a></li>
+  <li><a href="#rule-10">The new code does not call the old code, and the old code does not call the new.</a></li>
+  <li><a href="#rule-11">Every new test or scenario has failed at least once on the defect it checks.</a></li>
+  <li><a href="#rule-12">The kind of an object is stored. Nobody guesses it from a label or an identifier.</a></li>
+  <li><a href="#rule-13">The screen draws the state the server returned.</a></li>
+  <li><a href="#rule-14">The outcome does not depend on the order of responses.</a></li>
+  <li><a href="#rule-15">Whether an action is allowed is decided by the server.</a></li>
+</ol>
+
+Plus one more, the [antigoal rule](#antigoal): three failed fixes, stop and review the design.
 
 ### <a id="rule-1"></a>1. State is a stored field
 
 <div class="rule" markdown="1">
-An entity's state is a stored field with a declared list of values and a transition table, declared once in code. No code derives it from the event log, from whether rows exist, or from a neighbor table. The API returns the stored state; the frontend draws from it. If the frontend needs the list of values, it gets it from the API contract.
+An entity's state is a stored field with a declared list of values and a transition table, declared once in code. The database constraint is built from the same list. No code works out the state from the event log, from whether rows exist, or from a neighbor table. The API returns the stored state; the frontend draws from it.
 </div>
 
 <div class="example" markdown="1">
@@ -89,7 +113,7 @@ A reviewer changes an attempt's result from `needs_review` to `passed`. The atte
 ### <a id="rule-2"></a>2. One function writes the state
 
 <div class="rule" markdown="1">
-One function writes the state, in one transaction with the data of the transition, and rejects any transition missing from the table. It also owns the decision: callers pass facts, the function applies the rule. Seven callers that compute seven verdicts and hand them to one setter still have seven owners. Two concurrent callers cannot both move the entity from the same old state.
+One function writes the state, in one transaction with the data of the transition, and rejects any transition missing from the table. It also owns the decision: callers pass facts, the function applies the rule. Seven callers that reach seven decisions and hand them to one setter still have seven owners. Two concurrent callers cannot both move the entity from the same old state.
 </div>
 
 <div class="example" markdown="1">
@@ -101,7 +125,7 @@ An automatic assessment reports a score and a flag that human review is required
 ### <a id="rule-3"></a>3. Every wait has a failure state
 
 <div class="rule" markdown="1">
-Every wait on an external call (a model, the network, a queue, a background worker) has a failure state. Failure and timeout are declared transitions. A process outside the waiting worker moves the entity out if that worker dies. No entity is left without a next step.
+Every wait on an external call (a model, the network, a queue, a background worker) has a failure state and a timeout. Failure and timeout are declared transitions. A process outside the waiting worker moves the entity out if that worker dies. No entity is left without a next step.
 </div>
 
 <div class="example" markdown="1">
@@ -110,7 +134,7 @@ A document parser claims a job with a two-minute lease and crashes. After the le
 <p class="check">Kill the parser after the claim, with no browser tab open. The job reaches <code>failed</code> on its own.</p>
 </div>
 
-### <a id="rule-4"></a>4. Every transition has a test
+### <a id="rule-4"></a>4. Transitions have tests
 
 <div class="rule" markdown="1">
 Every allowed transition has a test: starting state, event, stored result. Failure transitions too. A forbidden transition has a test that it changes nothing. A contract test sends one payload through both sides of a boundary; a mock does not count as the other side.
@@ -129,7 +153,7 @@ The state, the transition table and the writer live in one package. Other packag
 </div>
 
 <div class="example" markdown="1">
-The `attempts` package exposes `record_answer` and `review_result`. The reporting package reads the public view but cannot import the internal writer or update the attempt through the ORM model.
+The `attempts` package offers `record_answer` and `review_result`. The reporting package reads the public view but cannot import the internal writer or update the attempt through the ORM model.
 
 <p class="check">A fixture where reporting imports the writer fails the import check; use of the public view passes.</p>
 </div>
@@ -141,7 +165,7 @@ A failure records its reason as a code from one catalog. The catalog declares ea
 </div>
 
 <div class="example" markdown="1">
-A provider answers "Too many requests" today and "Rate limit exceeded" tomorrow. The adapter maps the response status to `provider_rate_limited`; the catalog says it is retryable. A document section without text stores `fill: missing`; the renderer prints "Requires clarification".
+A provider answers "Too many requests" today and "Rate limit exceeded" tomorrow. The adapter maps the response status to `provider_rate_limited`; the catalog says it can be retried. A document section without text stores `fill: missing`; the renderer prints "Requires clarification".
 
 <p class="check">Two responses with the same status and different messages get the same retry decision. Changing the label does not change which sections count as missing.</p>
 </div>
@@ -149,43 +173,19 @@ A provider answers "Too many requests" today and "Rate limit exceeded" tomorrow.
 ### <a id="rule-7"></a>7. Unknown is not success
 
 <div class="rule" markdown="1">
-An unknown value, a failed write or an expired lock ends in a failure state. If the failure itself cannot be stored, the operation reports that it failed, stops dependent work, and recovery finishes the transition later.
+An unknown value, a failed write or a lost lock ends in a failure. Silent success is not allowed. If the failure itself cannot be stored, the operation reports that it failed, stops dependent work, and recovery finishes the transition later.
 </div>
 
 <div class="example" markdown="1">
 An assessment has a score, but the database rejects the transaction that saves it. The service reports that the result was not saved and sends no "passed" notification. Recovery repeats the operation by its request identifier.
 
-<p class="check">Inject a commit failure: storage has no successful result, and no success notification leaves the service.</p>
+<p class="check">Force a commit failure: storage has no successful result, and no success notification leaves the service.</p>
 </div>
 
-### <a id="rule-8"></a>8. One kind knows nothing about other kinds
+### <a id="rule-8"></a>8. Parts are accepted separately
 
 <div class="rule" markdown="1">
-Code of one kind knows nothing about other kinds. No "what type am I" checks. The kind is a declared field; nobody guesses it from an identifier prefix, a title, a unit or the presence of a field. A dispatcher picks the handler by that field.
-</div>
-
-<div class="example" markdown="1">
-An assignment response carries `kind: trainer`. The dispatcher selects the trainer handler, which knows attempts and assessments. The document handler knows versions and acknowledgment. Renaming the trainer or changing its identifier cannot send it to the document handler.
-
-<p class="check">Dispatch the same kind with different titles and identifiers; the handler is always the same.</p>
-</div>
-
-### <a id="rule-9"></a>9. New and old code do not call each other
-
-<div class="rule" markdown="1">
-The new code does not call the old code, and the old code does not call the new. Every bridge is a named exception in the import contract and goes away with the old path.
-</div>
-
-<div class="example" markdown="1">
-During migration, one named adapter reads old assignment records and converts them to the new input. The import contract allows only this adapter to read the old schema; its removal condition is "all assignments migrated".
-
-<p class="check">A direct import of the old engine from the new attempt handler fails the dependency check.</p>
-</div>
-
-### <a id="rule-10"></a>10. Parts are accepted separately
-
-<div class="rule" markdown="1">
-A defect in one part does not fail the whole if the other parts can be accepted. Whether a part is required comes from its type and the plan, not from the place where a check failed. A rejected part keeps its reason code.
+Independent parts of a result are accepted separately. A defect in one part does not fail the whole if the other parts can be accepted. The contract says which parts are required, not the place where a check failed. A rejected part keeps its reason code.
 </div>
 
 <div class="example" markdown="1">
@@ -194,10 +194,34 @@ A course is assembled from four modules. The model returns no text for the quiz 
 <p class="check">Plant an empty response for one optional part: the other parts are published, and the rejected part has its reason code.</p>
 </div>
 
+### <a id="rule-9"></a>9. The kind of a task is declared as data
+
+<div class="rule" markdown="1">
+The kind of a task is a declared field, and a dispatcher picks the handler by that field. A handler does not work out its kind as "not A and not B". Code of one kind knows nothing about other kinds.
+</div>
+
+<div class="example" markdown="1">
+A handler is written as "not a trainer and not a document, so this is mine". A new kind, `survey`, is added, and the handler quietly takes it. With a declared kind, the dispatcher finds no handler for `survey` and refuses with a reason code.
+
+<p class="check">Send a kind that has no handler: the request is refused with a reason code, and no handler runs.</p>
+</div>
+
+### <a id="rule-10"></a>10. New and old code do not call each other
+
+<div class="rule" markdown="1">
+The new code does not call the old code, and the old code does not call the new. Every bridge is a named temporary exception in the import contract and goes away with the old path.
+</div>
+
+<div class="example" markdown="1">
+During migration, one named adapter reads old assignment records and converts them to the new input. The import contract allows only this adapter to read the old schema; its removal condition is "all assignments migrated".
+
+<p class="check">A direct import of the old engine from the new attempt handler fails the dependency check.</p>
+</div>
+
 ### <a id="rule-11"></a>11. Every check has failed once
 
 <div class="rule" markdown="1">
-Every new test and scenario fails at least once on a real defect: revert the fix or plant the defect, and the check must go red. A check measures the visible result, not a sign that code ran: the answer to the question, not status 200; the border color in focus, not an internal variable of a library. A scenario that passes because of the environment (a stale index, data from a previous run, a cache) proves nothing, so it also runs on a clean environment.
+Every new test and scenario fails at least once on the defect it checks: revert the fix or plant the defect, and the check must go red. A check measures the visible result, not a sign that code ran: the answer to the question, not status 200. A scenario that passes because of the environment (an old index, data from a previous run, a cache) proves nothing, so it also runs on a clean environment.
 </div>
 
 <div class="example" markdown="1">
@@ -206,10 +230,22 @@ A test for a timeout fix passes. With the fix reverted it still passes, because 
 <p class="check">The pull request shows a red run of the new test on the reverted code and a green run on the fix.</p>
 </div>
 
-### <a id="rule-12"></a>12. The screen draws what the server returned
+### <a id="rule-12"></a>12. The kind of an object is stored
 
 <div class="rule" markdown="1">
-The state of an entity stored on the server comes in one field of the response. The browser does not assemble it from flags, timers, effects or its own storage. The browser keeps only its own state: an open panel, an unsent edit.
+The kind of an object is stored explicitly. Nobody guesses it from a label, an identifier prefix, the shape of a string, or the presence of a field.
+</div>
+
+<div class="example" markdown="1">
+An assignment response carries `kind: trainer`. The dispatcher picks the trainer handler, which knows attempts and assessments. Renaming the trainer or changing its identifier cannot send it to the document handler.
+
+<p class="check">Dispatch the same kind with different titles and identifiers; the handler is always the same.</p>
+</div>
+
+### <a id="rule-13"></a>13. The screen draws what the server returned
+
+<div class="rule" markdown="1">
+The state of an entity stored on the server comes in one field of the response. The browser does not assemble it from flags, timers, effects or its own storage. The browser keeps only its own state: an open panel, an edit not yet sent.
 </div>
 
 <div class="example" markdown="1">
@@ -218,10 +254,10 @@ A draft page chose its step from five fields of three responses and a browser ti
 <p class="check">Open the page in each stage with empty browser storage: the view matches the stage from the response.</p>
 </div>
 
-### <a id="rule-13"></a>13. The outcome does not depend on the order of responses
+### <a id="rule-14"></a>14. The outcome does not depend on the order of responses
 
 <div class="rule" markdown="1">
-If a response writes to fields that the user can also change, those fields are locked until the response arrives, or a precedence rule is declared. The speed of an external system does not change the result.
+Competing responses and user actions have a declared rule for which one wins. The order in which responses arrive does not change the result.
 </div>
 
 <div class="example" markdown="1">
@@ -230,29 +266,81 @@ The user edits a draft's title while the model is still generating the draft. Th
 <p class="check">Deliver the model response before and after the user's edit: the final title is the user's in both cases.</p>
 </div>
 
-### <a id="rule-14"></a>14. The server decides what is allowed
+### <a id="rule-15"></a>15. The server decides what is allowed
 
 <div class="rule" markdown="1">
-A rule that allows or forbids a user's action (a retry, a deadline, a limit, access) is checked by the server. The browser keeps no copy of the rule: it learns what is available from the server's response and shows a refusal by its reason code.
+A rule that decides whether a user's action is allowed (a retry, a deadline, a limit, access) is checked by the server. The browser keeps no copy of the rule: it gets the available actions and the reasons for a refusal from the server's response.
 </div>
 
 <div class="example" markdown="1">
-A course setting says the final test can be retaken only after the learner has studied every section again. The server did not check it; the page kept the studied sections in the memory of the open tab. After a reload the list was empty. Now the server records studied sections, and the response says `retake_allowed: false` with reason `sections_not_restudied`.
+A course setting says the final test can be taken again only after the user has studied every section again. The server did not check it; the page kept the studied sections in the memory of the open tab. After a reload the list was empty. Now the server records studied sections, and the response says `retake_allowed: false` with reason `sections_not_restudied`.
 
-<p class="check">Reload the page and call the retake endpoint directly, bypassing the page: the server refuses with the same reason code.</p>
+<p class="check">Reload the page and call the retake endpoint directly, without the page: the server refuses with the same reason code.</p>
 </div>
 
-### <a id="rule-15"></a>15. Three failed patches mean a design change
+## <a id="antigoal"></a>The antigoal rule
 
 <div class="rule" markdown="1">
-If three patch attempts did not fix a defect, the agent stops and proposes an architecture change instead of a fourth patch. The proposal names what is missing: a state, a transition, an owner of a decision, a way out of a wait.
+If you could not fix one thing in three attempts, stop and review how it is built. Do not make a fourth patch. The proposal names what is missing: a state, a transition, an owner of a decision, a way out of a wait.
 </div>
 
+The name is a reply to Anthropic's `/goal`, which keeps spending tokens trying to reach the goal.
+
+A bug comes in: a user's attempt hangs on step one. The agent fixes it where it hangs. One more condition, one more function that works out the same state its own way. In one day the agent merged four patches into one function. That function derived the attempt's state from the event log across seven tables. The next day the agent wrote that it had never stopped to ask where the attempt keeps its state. The answer was nowhere, and it had been in front of the agent since day one. This happened right next to a clean room we had built a month earlier.
+
 <div class="example" markdown="1">
-An upload keeps showing "Processing". Three patches add a browser timeout, another poll and a retry on page reload; the defect returns after a worker restart. Before a fourth patch, the agent proposes a stored processing job with a lease and an expiry transition owned by a watchdog.
+An upload keeps showing "Processing". Three patches add a browser timeout, another poll and a retry on page reload; the defect returns after a worker restart. Before a fourth patch, the agent proposes a stored processing job with a lease and a transition for when the lease expires, owned by a watchdog.
 
 <p class="check">Kill the worker, keep the browser closed, open it later: the page shows the recovered state.</p>
 </div>
+
+## Overlap with ub-mode
+
+Uncle Bob recently released a skill called ub-mode. Two of its rules match this charter:
+
+- **Attack the Premise:** if two fixes with a shared premise failed the same check, examine the premise before making the next fix. This is the antigoal rule.
+- **TDD:** see the test fail for the expected reason. This is rule 11.
+
+ub-mode is a skill that you call for a specific task. The clean room charter stays in the repository and is read in every session.
+
+## A weak model does not always follow the charter
+
+An experienced developer on my team read the audit behind these rules and asked: shouldn't the model already know such principles, the way it knows clean code? The model does not hold these principles. It continues the code in front of it, and it learned from code full of workarounds. So the rules are written down where the agent reads them, and checked on every change.
+
+You can put the rules in `AGENTS.md`, and the model will read them on its own. For a weak model I put the rules into the prompt together with the task.
+
+I compared this on DeepSeek V4 Flash: 36 runs, with violations counted blind by Claude Sonnet.
+
+| What the model received | Findings |
+|---|---|
+| Nothing | 36 |
+| A sample | 31 |
+| A sample and the rules in `AGENTS.md` | 25 |
+| A sample, `AGENTS.md`, and the requirements in the prompt | 18 |
+
+The first example. When the rule "one value is declared once" was in `AGENTS.md`, DeepSeek wrote the event type as a string in three runs out of three. When the task named this trap directly, it did so in none of three.
+
+The second example. In the old code an order had no status field. It had a string field `cancel_reason`, the reason for cancellation. Whether an order was cancelled, the code decided by whether this field was filled. Four places checked it.
+
+I gave DeepSeek a task: a cancelled order must not get new assembly tasks. With no extra rules, the model solved it with the same guess, the fifth one:
+
+```diff
+- if order is None:
++ if order is None or order.cancel_reason is not None:
+      return None
+```
+
+With four rules in the prompt but no sample, the result was the same.
+
+Then I gave the same task with the rules from `AGENTS.md` in the prompt and a sample state machine. The task said directly: "Repeat the design, not the names." DeepSeek declared `OrderStatus` with four values (`new`, `paid`, `shipped`, `cancelled`), a transition table and one checking function. Five scattered `cancel_reason` checks became one read of the status.
+
+| Result | No extra rules | With rules | With rules and a sample |
+|---|---|---|---|
+| Transition table | No | No | Yes |
+| Completion check | Repeated in five places | Repeated in five places | One function |
+| Separate state field | No | No | Yes |
+
+The sample worked like a seed crystal, the small crystal from which a larger one is grown. DeepSeek received one good state machine and repeated its design. Without the sample, the same model repeated what it saw in the old code: a fifth check of `cancel_reason`.
 
 ## A small state machine
 
@@ -288,14 +376,14 @@ A network error in the browser means the browser could not read the operation, n
 | 2. One writer | grep for assignments to the state field outside its package |
 | 3. Failure state | every `queued`, `pending`, `running` has a deadline and a named process that ends it |
 | 4. Tests | a test per row of the transition table, plus one forbidden transition |
-| 5, 9. Boundaries | an import contract with a forbidden import for each boundary; the list of bridges only shrinks |
+| 5, 10. Boundaries | an import contract with a forbidden import for each boundary; the list of bridges only gets shorter |
 | 6. Reason codes | grep for `in str(exc)`, `.includes(message)`, `startswith` on codes |
-| 8. Kinds | grep for `startswith` on identifiers and comparisons with titles |
-| 10. Parts | a planted defect in one optional part; the other parts are still accepted |
+| 8. Parts | a planted defect in one optional part; the other parts are still accepted |
+| 9, 12. Kinds | grep for `startswith` on identifiers, comparisons with titles, and chains of "not this kind" |
 | 11. Failed once | revert the fix; the new test must fail |
-| 12. Screen | grep the frontend for server statuses in `useState`, `setTimeout` around a status, entity state in `localStorage` |
-| 13. Order | deliver the response before and after the user's action; the results match |
-| 14. Server decides | call the endpoint directly with a forbidden action; the server refuses with a reason code |
+| 13. Screen | grep the frontend for server statuses in `useState`, `setTimeout` around a status, entity state in `localStorage` |
+| 14. Order | deliver the response before and after the user's action; the results match |
+| 15. Server decides | call the endpoint directly with a forbidden action; the server refuses with a reason code |
 
 Every check has a case on which it must fail: a planted import, a planted status list, a planted string comparison. One question goes to every diff: **does this change add a second way to compute a fact the system already stores?**
 
@@ -305,4 +393,5 @@ This is one way to build the environment I described in [Agent Comfort]({% post_
 
 ## Article history
 
+- **30 October 2026:** rewritten to match the Habr version. Added the two projects, the analyst and the implementer, how the old code is kept away from the implementer, the migration rules, the overlap with ub-mode, and the DeepSeek measurement. Rule numbers now follow Habr: the rule on kinds is split into 9 and 12, and "three failed patches" is now the separate antigoal rule. Rule 9 has a new example.
 - **22 October 2026:** first version, from my LinkedIn post: the Phoenix history, behavior cards, fifteen rules with an example and a check for each, a state machine.
