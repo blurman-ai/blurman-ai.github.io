@@ -26,7 +26,7 @@ starting point. Keep one article that can grow through later additions.
 - Prior work: historical clean-room separation already supplies the process. The ten
   architecture rules come from the author; do not attribute them to Phoenix or claim
   that Phoenix invented specification-driven development.
-- Today's audit, `dgtlU/tmp/audit-patches/AUDIT.md`, dated 2026-10-22: used only to
+- Today's internal audit, dated 2026-10-22: used only to
   refine general principles about decision ownership, contract declarations, structured
   meaning, frontend state, and recovery from waits. The author explicitly excluded
   reporting compliance or violations. No audit findings, counts, or internal paths
@@ -99,6 +99,6 @@ from the main text, no reasoning paragraphs.
   the outcome does not depend on the order of responses; each with an example and a check.
   "Three failed patches" moved to rule 14.
 - APPLIED, same day: rule 14 "the server decides what is allowed" (baseline principle 15,
-  dgtls/baseline#156), "three failed patches" is rule 15. A paragraph after the opening
+  an internal issue), "three failed patches" is rule 15. A paragraph after the opening
   story from the author's team chat of 22.10.2026: a developer expected the model to know
   these principles already. The developer is not named.
