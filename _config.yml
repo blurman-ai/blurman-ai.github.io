@@ -6,5 +6,8 @@ minima:
   skin: classic
 plugins:
   - jekyll-feed
+exclude:
+  - backlog
+  - tools
 markdown: kramdown
 permalink: /:year/:month/:day/:title/
